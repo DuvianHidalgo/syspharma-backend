@@ -14,7 +14,10 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
+<<<<<<< HEAD
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.9.0" />
+=======
+>>>>>>> 0cf9820041e58f3591f56cc28d0617f8b91ba551
   </ItemGroup>
 
   <ItemGroup>

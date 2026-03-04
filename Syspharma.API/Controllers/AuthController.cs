@@ -37,26 +37,29 @@ namespace Syspharma.API.Controllers
         }
 
         [HttpPost("register")]
-        public async Task<IActionResult> Register([FromBody] RegisterDto dto)
-        {
-            if (await _context.Usuarios.AnyAsync(u => u.Email == dto.Email))
-                return BadRequest(new { message = "El email ya está registrado" });
+public async Task<IActionResult> Register([FromBody] RegisterDto dto)
+{
+    if (await _context.Usuarios.AnyAsync(u => u.Email == dto.Email))
+        return BadRequest(new { message = "El email ya está registrado" });
 
-            var usuario = new Usuario
-            {
-                Nombre = dto.Nombre,
-                Email = dto.Email,
-                Password = BCrypt.Net.BCrypt.HashPassword(dto.Password),
-                RoleId = dto.RoleId,
-                Estado = true,
-                FechaCreacion = DateTime.Now
-            };
+    var usuario = new Usuario
+    {
+        Nombre = dto.Nombre,
+        Email = dto.Email,
+        Password = BCrypt.Net.BCrypt.HashPassword(dto.Password),
+        RoleId = dto.RoleId,
+        Documento = string.IsNullOrEmpty(dto.Documento) ? null : dto.Documento,
+        TipoDocumento = dto.TipoDocumento,
+        Telefono = dto.Telefono,
+        Estado = true,
+        FechaCreacion = DateTime.Now
+    };
 
-            _context.Usuarios.Add(usuario);
-            await _context.SaveChangesAsync();
+    _context.Usuarios.Add(usuario);
+    await _context.SaveChangesAsync();
 
-            return Ok(new { message = "Usuario registrado correctamente" });
-        }
+    return Ok(new { message = "Usuario registrado correctamente" });
+}
 
         private string GenerarToken(Usuario usuario)
         {
@@ -93,5 +96,8 @@ namespace Syspharma.API.Controllers
         public string Email { get; set; } = null!;
         public string Password { get; set; } = null!;
         public int RoleId { get; set; }
+        public string? Documento { get; set; }
+        public string? TipoDocumento { get; set; }
+        public string? Telefono { get; set; }
     }
 }

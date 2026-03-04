@@ -1,12 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using Syspharma.Data.Entities;
 
-namespace Syspharma.API.Entities;
+namespace Syspharma.Data.Context;
 
-public partial class SyspharmaContext : IdentityDbContext<IdentityUser>
+public partial class SyspharmaContext : DbContext
 {
     public SyspharmaContext()
     {
@@ -17,22 +16,6 @@ public partial class SyspharmaContext : IdentityDbContext<IdentityUser>
     {
     }
 
-    public virtual DbSet<AspNetRole> AspNetRoles { get; set; }
-
-    public virtual DbSet<AspNetRoleClaim> AspNetRoleClaims { get; set; }
-
-    public virtual DbSet<AspNetUser> AspNetUsers { get; set; }
-
-    public virtual DbSet<AspNetUserClaim> AspNetUserClaims { get; set; }
-
-    public virtual DbSet<AspNetUserLogin> AspNetUserLogins { get; set; }
-
-    public virtual DbSet<AspNetUserToken> AspNetUserTokens { get; set; }
-
-    public virtual DbSet<Carrito> Carritos { get; set; }
-
-    public virtual DbSet<CarritoDetalle> CarritoDetalles { get; set; }
-
     public virtual DbSet<Categoria> Categorias { get; set; }
 
     public virtual DbSet<Cita> Citas { get; set; }
@@ -41,15 +24,9 @@ public partial class SyspharmaContext : IdentityDbContext<IdentityUser>
 
     public virtual DbSet<CompraDetalle> CompraDetalles { get; set; }
 
-    public virtual DbSet<Favorito> Favoritos { get; set; }
-
     public virtual DbSet<Gasto> Gastos { get; set; }
 
     public virtual DbSet<Medico> Medicos { get; set; }
-
-    public virtual DbSet<Pedido> Pedidos { get; set; }
-
-    public virtual DbSet<PedidoDetalle> PedidoDetalles { get; set; }
 
     public virtual DbSet<Permiso> Permisos { get; set; }
 
@@ -57,7 +34,7 @@ public partial class SyspharmaContext : IdentityDbContext<IdentityUser>
 
     public virtual DbSet<Proveedore> Proveedores { get; set; }
 
-    public new virtual DbSet<Role> Roles { get; set; }
+    public virtual DbSet<Role> Roles { get; set; }
 
     public virtual DbSet<RolesPermiso> RolesPermisos { get; set; }
 
@@ -67,151 +44,47 @@ public partial class SyspharmaContext : IdentityDbContext<IdentityUser>
 
     public virtual DbSet<Usuario> Usuarios { get; set; }
 
+    public virtual DbSet<VCompraDetalle> VCompraDetalles { get; set; }
+
     public virtual DbSet<VResumenTurno> VResumenTurnos { get; set; }
+
+    public virtual DbSet<VVentaDetalle> VVentaDetalles { get; set; }
 
     public virtual DbSet<Venta> Ventas { get; set; }
 
     public virtual DbSet<VentaDetalle> VentaDetalles { get; set; }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-        => optionsBuilder.UseSqlServer("Server=DESKTOP-SANTIAG\\SQLEXPRESS;Database=syspharma;Trusted_Connection=True;TrustServerCertificate=True");
+#warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see https://go.microsoft.com/fwlink/?LinkId=723263.
+        => optionsBuilder.UseSqlServer("Server=DESKTOP-5BJJQ8K\\SQLEXPRESS;Database=syspharma;Trusted_Connection=True;TrustServerCertificate=True");
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        // Requerido para las tablas de Identity
-        base.OnModelCreating(modelBuilder);
-
-        modelBuilder.Entity<AspNetRole>(entity =>
-        {
-            entity.HasIndex(e => e.NormalizedName, "RoleNameIndex")
-                .IsUnique()
-                .HasFilter("([NormalizedName] IS NOT NULL)");
-
-            entity.Property(e => e.Name).HasMaxLength(256);
-            entity.Property(e => e.NormalizedName).HasMaxLength(256);
-        });
-
-        modelBuilder.Entity<AspNetRoleClaim>(entity =>
-        {
-            entity.HasIndex(e => e.RoleId, "IX_AspNetRoleClaims_RoleId");
-
-            entity.HasOne(d => d.Role).WithMany(p => p.AspNetRoleClaims).HasForeignKey(d => d.RoleId);
-        });
-
-        modelBuilder.Entity<AspNetUser>(entity =>
-        {
-            entity.HasIndex(e => e.NormalizedEmail, "EmailIndex");
-
-            entity.HasIndex(e => e.NormalizedUserName, "UserNameIndex")
-                .IsUnique()
-                .HasFilter("([NormalizedUserName] IS NOT NULL)");
-
-            entity.Property(e => e.Email).HasMaxLength(256);
-            entity.Property(e => e.NormalizedEmail).HasMaxLength(256);
-            entity.Property(e => e.NormalizedUserName).HasMaxLength(256);
-            entity.Property(e => e.UserName).HasMaxLength(256);
-
-            entity.HasMany(d => d.Roles).WithMany(p => p.Users)
-                .UsingEntity<Dictionary<string, object>>(
-                    "AspNetUserRole",
-                    r => r.HasOne<AspNetRole>().WithMany().HasForeignKey("RoleId"),
-                    l => l.HasOne<AspNetUser>().WithMany().HasForeignKey("UserId"),
-                    j =>
-                    {
-                        j.HasKey("UserId", "RoleId");
-                        j.ToTable("AspNetUserRoles");
-                        j.HasIndex("RoleId", "IX_AspNetUserRoles_RoleId");
-                    });
-        });
-
-        modelBuilder.Entity<AspNetUserClaim>(entity =>
-        {
-            entity.HasIndex(e => e.UserId, "IX_AspNetUserClaims_UserId");
-
-            entity.HasOne(d => d.User).WithMany(p => p.AspNetUserClaims).HasForeignKey(d => d.UserId);
-        });
-
-        modelBuilder.Entity<AspNetUserLogin>(entity =>
-        {
-            entity.HasKey(e => new { e.LoginProvider, e.ProviderKey });
-
-            entity.HasIndex(e => e.UserId, "IX_AspNetUserLogins_UserId");
-
-            entity.HasOne(d => d.User).WithMany(p => p.AspNetUserLogins).HasForeignKey(d => d.UserId);
-        });
-
-        modelBuilder.Entity<AspNetUserToken>(entity =>
-        {
-            entity.HasKey(e => new { e.UserId, e.LoginProvider, e.Name });
-
-            entity.HasOne(d => d.User).WithMany(p => p.AspNetUserTokens).HasForeignKey(d => d.UserId);
-        });
-
-        modelBuilder.Entity<Carrito>(entity =>
-        {
-            entity.HasKey(e => e.Id).HasName("PK__carritos__3213E83F3310EC39");
-
-            entity.ToTable("carritos");
-
-            entity.Property(e => e.Id).HasColumnName("id");
-            entity.Property(e => e.Estado)
-                .HasMaxLength(20)
-                .IsUnicode(false)
-                .HasDefaultValue("activo")
-                .HasColumnName("estado");
-            entity.Property(e => e.FechaCreacion)
-                .HasDefaultValueSql("(getdate())")
-                .HasColumnName("fechaCreacion");
-            entity.Property(e => e.UsuarioId).HasColumnName("usuarioId");
-
-            entity.HasOne(d => d.Usuario).WithMany(p => p.Carritos)
-                .HasForeignKey(d => d.UsuarioId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_Carritos_Usuario");
-        });
-
-        modelBuilder.Entity<CarritoDetalle>(entity =>
-        {
-            entity.HasKey(e => e.Id).HasName("PK__carrito___3213E83FC2AB1E59");
-
-            entity.ToTable("carrito_detalles");
-
-            entity.Property(e => e.Id).HasColumnName("id");
-            entity.Property(e => e.Cantidad).HasColumnName("cantidad");
-            entity.Property(e => e.CarritoId).HasColumnName("carritoId");
-            entity.Property(e => e.ProductoId).HasColumnName("productoId");
-
-            entity.HasOne(d => d.Carrito).WithMany(p => p.CarritoDetalles)
-                .HasForeignKey(d => d.CarritoId)
-                .HasConstraintName("FK_CarritoDetalles_Carrito");
-
-            entity.HasOne(d => d.Producto).WithMany(p => p.CarritoDetalles)
-                .HasForeignKey(d => d.ProductoId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_CarritoDetalles_Producto");
-        });
-
         modelBuilder.Entity<Categoria>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__categori__3213E83F430E4B9B");
+            entity.HasKey(e => e.Id).HasName("PK__categori__3213E83F9886B4BE");
 
             entity.ToTable("categorias");
 
-            entity.HasIndex(e => e.Nombre, "UQ__categori__72AFBCC684B02B18").IsUnique();
+            entity.HasIndex(e => e.Nombre, "UQ__categori__72AFBCC6A00018BA").IsUnique();
 
             entity.Property(e => e.Id).HasColumnName("id");
             entity.Property(e => e.Descripcion).HasColumnName("descripcion");
             entity.Property(e => e.Estado)
                 .HasDefaultValue(true)
                 .HasColumnName("estado");
+            entity.Property(e => e.FechaCreacion)
+                .HasDefaultValueSql("(getdate())")
+                .HasColumnName("fechaCreacion");
             entity.Property(e => e.Nombre)
                 .HasMaxLength(100)
+                .IsUnicode(false)
                 .HasColumnName("nombre");
         });
 
         modelBuilder.Entity<Cita>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__citas__3213E83F65E79126");
+            entity.HasKey(e => e.Id).HasName("PK__citas__3213E83F6870EB6E");
 
             entity.ToTable("citas");
 
@@ -240,6 +113,7 @@ public partial class SyspharmaContext : IdentityDbContext<IdentityUser>
                 .HasColumnName("pacienteEmail");
             entity.Property(e => e.PacienteNombre)
                 .HasMaxLength(200)
+                .IsUnicode(false)
                 .HasColumnName("pacienteNombre");
             entity.Property(e => e.PacienteTelefono)
                 .HasMaxLength(20)
@@ -261,11 +135,11 @@ public partial class SyspharmaContext : IdentityDbContext<IdentityUser>
 
         modelBuilder.Entity<Compra>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__compras__3213E83F2E6C2C84");
+            entity.HasKey(e => e.Id).HasName("PK__compras__3213E83FDED3A8CE");
 
             entity.ToTable("compras");
 
-            entity.HasIndex(e => e.NumeroCompra, "UQ_Compras_Numero").IsUnique();
+            entity.HasIndex(e => e.NumeroCompra, "UQ__compras__6EB8ED5122FC55F7").IsUnique();
 
             entity.HasIndex(e => e.ProveedorId, "idx_compras_proveedor");
 
@@ -273,7 +147,7 @@ public partial class SyspharmaContext : IdentityDbContext<IdentityUser>
             entity.Property(e => e.Estado)
                 .HasMaxLength(20)
                 .IsUnicode(false)
-                .HasDefaultValue("registrada")
+                .HasDefaultValue("pendiente")
                 .HasColumnName("estado");
             entity.Property(e => e.FechaCompra)
                 .HasDefaultValueSql("(getdate())")
@@ -288,7 +162,6 @@ public partial class SyspharmaContext : IdentityDbContext<IdentityUser>
                 .HasMaxLength(50)
                 .IsUnicode(false)
                 .HasColumnName("numeroCompra");
-            entity.Property(e => e.Observaciones).HasColumnName("observaciones");
             entity.Property(e => e.ProveedorId).HasColumnName("proveedorId");
             entity.Property(e => e.Subtotal)
                 .HasDefaultValue(0m)
@@ -302,17 +175,17 @@ public partial class SyspharmaContext : IdentityDbContext<IdentityUser>
             entity.HasOne(d => d.Proveedor).WithMany(p => p.Compras)
                 .HasForeignKey(d => d.ProveedorId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_Compras_Proveedor");
+                .HasConstraintName("FK_Compras_Proveedores");
 
             entity.HasOne(d => d.Usuario).WithMany(p => p.Compras)
                 .HasForeignKey(d => d.UsuarioId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_Compras_Usuario");
+                .HasConstraintName("FK_Compras_Usuarios");
         });
 
         modelBuilder.Entity<CompraDetalle>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__compra_d__3213E83F46C11802");
+            entity.HasKey(e => e.Id).HasName("PK__compra_d__3213E83F9B4482A4");
 
             entity.ToTable("compra_detalles");
 
@@ -323,49 +196,20 @@ public partial class SyspharmaContext : IdentityDbContext<IdentityUser>
                 .HasColumnType("decimal(12, 2)")
                 .HasColumnName("precioUnitario");
             entity.Property(e => e.ProductoId).HasColumnName("productoId");
-            entity.Property(e => e.Subtotal)
-                .HasColumnType("decimal(12, 2)")
-                .HasColumnName("subtotal");
 
             entity.HasOne(d => d.Compra).WithMany(p => p.CompraDetalles)
                 .HasForeignKey(d => d.CompraId)
-                .HasConstraintName("FK_CompraDetalles_Compra");
+                .HasConstraintName("FK_CDetalles_Compras");
 
             entity.HasOne(d => d.Producto).WithMany(p => p.CompraDetalles)
                 .HasForeignKey(d => d.ProductoId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_CompraDetalles_Producto");
-        });
-
-        modelBuilder.Entity<Favorito>(entity =>
-        {
-            entity.HasKey(e => e.Id).HasName("PK__favorito__3213E83F2BEBF947");
-
-            entity.ToTable("favoritos");
-
-            entity.HasIndex(e => new { e.UsuarioId, e.ProductoId }, "unique_usuario_producto").IsUnique();
-
-            entity.Property(e => e.Id).HasColumnName("id");
-            entity.Property(e => e.FechaAgregado)
-                .HasDefaultValueSql("(getdate())")
-                .HasColumnName("fechaAgregado");
-            entity.Property(e => e.ProductoId).HasColumnName("productoId");
-            entity.Property(e => e.UsuarioId).HasColumnName("usuarioId");
-
-            entity.HasOne(d => d.Producto).WithMany(p => p.Favoritos)
-                .HasForeignKey(d => d.ProductoId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_Favoritos_Producto");
-
-            entity.HasOne(d => d.Usuario).WithMany(p => p.Favoritos)
-                .HasForeignKey(d => d.UsuarioId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_Favoritos_Usuario");
+                .HasConstraintName("FK_CDetalles_Productos");
         });
 
         modelBuilder.Entity<Gasto>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__gastos__3213E83F9DA3A73A");
+            entity.HasKey(e => e.Id).HasName("PK__gastos__3213E83F56FE0EDF");
 
             entity.ToTable("gastos");
 
@@ -381,6 +225,7 @@ public partial class SyspharmaContext : IdentityDbContext<IdentityUser>
                 .HasColumnName("comprobante");
             entity.Property(e => e.Concepto)
                 .HasMaxLength(200)
+                .IsUnicode(false)
                 .HasColumnName("concepto");
             entity.Property(e => e.Descripcion).HasColumnName("descripcion");
             entity.Property(e => e.FechaGasto)
@@ -405,7 +250,7 @@ public partial class SyspharmaContext : IdentityDbContext<IdentityUser>
 
         modelBuilder.Entity<Medico>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__medicos__3213E83F72005C98");
+            entity.HasKey(e => e.Id).HasName("PK__medicos__3213E83F259FD362");
 
             entity.ToTable("medicos");
 
@@ -424,6 +269,7 @@ public partial class SyspharmaContext : IdentityDbContext<IdentityUser>
                 .HasColumnName("email");
             entity.Property(e => e.Especialidad)
                 .HasMaxLength(100)
+                .IsUnicode(false)
                 .HasColumnName("especialidad");
             entity.Property(e => e.Estado)
                 .HasDefaultValue(true)
@@ -438,6 +284,7 @@ public partial class SyspharmaContext : IdentityDbContext<IdentityUser>
                 .HasColumnName("intervalo");
             entity.Property(e => e.Nombre)
                 .HasMaxLength(150)
+                .IsUnicode(false)
                 .HasColumnName("nombre");
             entity.Property(e => e.Telefono)
                 .HasMaxLength(20)
@@ -445,90 +292,13 @@ public partial class SyspharmaContext : IdentityDbContext<IdentityUser>
                 .HasColumnName("telefono");
         });
 
-        modelBuilder.Entity<Pedido>(entity =>
-        {
-            entity.HasKey(e => e.Id).HasName("PK__pedidos__3213E83FD48AD172");
-
-            entity.ToTable("pedidos");
-
-            entity.HasIndex(e => e.NumeroPedido, "UQ__pedidos__90DD614969B219F9").IsUnique();
-
-            entity.Property(e => e.Id).HasColumnName("id");
-            entity.Property(e => e.ClienteId).HasColumnName("clienteId");
-            entity.Property(e => e.EmpleadoId).HasColumnName("empleadoId");
-            entity.Property(e => e.Estado)
-                .HasMaxLength(20)
-                .IsUnicode(false)
-                .HasDefaultValue("pendiente")
-                .HasColumnName("estado");
-            entity.Property(e => e.FechaCreacion)
-                .HasDefaultValueSql("(getdate())")
-                .HasColumnName("fechaCreacion");
-            entity.Property(e => e.FechaEntrega).HasColumnName("fechaEntrega");
-            entity.Property(e => e.NumeroPedido)
-                .HasMaxLength(50)
-                .IsUnicode(false)
-                .HasColumnName("numeroPedido");
-            entity.Property(e => e.Origen)
-                .HasMaxLength(20)
-                .IsUnicode(false)
-                .HasColumnName("origen");
-            entity.Property(e => e.Total)
-                .HasColumnType("decimal(12, 2)")
-                .HasColumnName("total");
-
-            entity.HasOne(d => d.Cliente).WithMany(p => p.PedidoClientes)
-                .HasForeignKey(d => d.ClienteId)
-                .HasConstraintName("FK_Pedidos_Cliente");
-
-            entity.HasOne(d => d.Empleado).WithMany(p => p.PedidoEmpleados)
-                .HasForeignKey(d => d.EmpleadoId)
-                .HasConstraintName("FK_Pedidos_Empleado");
-        });
-
-        modelBuilder.Entity<PedidoDetalle>(entity =>
-        {
-            entity.HasKey(e => e.Id).HasName("PK__pedido_d__3213E83FBB424CE8");
-
-            entity.ToTable("pedido_detalles");
-
-            entity.Property(e => e.Id).HasColumnName("id");
-            entity.Property(e => e.Cantidad).HasColumnName("cantidad");
-            entity.Property(e => e.PedidoId).HasColumnName("pedidoId");
-            entity.Property(e => e.PrecioUnitario)
-                .HasColumnType("decimal(12, 2)")
-                .HasColumnName("precioUnitario");
-            entity.Property(e => e.ProductoId).HasColumnName("productoId");
-            entity.Property(e => e.ServicioId).HasColumnName("servicioId");
-            entity.Property(e => e.Tipo)
-                .HasMaxLength(20)
-                .IsUnicode(false)
-                .HasColumnName("tipo");
-
-            entity.HasOne(d => d.Pedido).WithMany(p => p.PedidoDetalles)
-                .HasForeignKey(d => d.PedidoId)
-                .HasConstraintName("FK_PedidoDetalles_Pedido");
-
-            entity.HasOne(d => d.Producto).WithMany(p => p.PedidoDetalles)
-                .HasForeignKey(d => d.ProductoId)
-                .HasConstraintName("FK_PedidoDetalles_Producto");
-
-            entity.HasOne(d => d.Servicio).WithMany(p => p.PedidoDetalles)
-                .HasForeignKey(d => d.ServicioId)
-                .HasConstraintName("FK_PedidoDetalles_Servicio");
-        });
-
         modelBuilder.Entity<Permiso>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__permisos__3213E83FD74BF38A");
+            entity.HasKey(e => e.Id).HasName("PK__permisos__3213E83F1E28B840");
 
             entity.ToTable("permisos");
 
-            entity.HasIndex(e => e.Codigo, "UQ__permisos__40F9A206807E2333").IsUnique();
-
-            entity.HasIndex(e => e.Categoria, "idx_permisos_categoria");
-
-            entity.HasIndex(e => e.Codigo, "idx_permisos_codigo");
+            entity.HasIndex(e => e.Codigo, "UQ__permisos__40F9A206CB3EF4FA").IsUnique();
 
             entity.Property(e => e.Id).HasColumnName("id");
             entity.Property(e => e.Categoria)
@@ -545,16 +315,21 @@ public partial class SyspharmaContext : IdentityDbContext<IdentityUser>
                 .HasColumnName("fechaCreacion");
             entity.Property(e => e.Nombre)
                 .HasMaxLength(100)
+                .IsUnicode(false)
                 .HasColumnName("nombre");
         });
 
         modelBuilder.Entity<Producto>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__producto__3213E83FA9923A2B");
+            entity.HasKey(e => e.Id).HasName("PK__producto__3213E83F8AE3CB5C");
 
             entity.ToTable("productos");
 
-            entity.HasIndex(e => e.Sku, "UQ__producto__DDDF4BE7DEDA9D35").IsUnique();
+            entity.HasIndex(e => e.Sku, "UQ__producto__DDDF4BE705E56FDA").IsUnique();
+
+            entity.HasIndex(e => new { e.CategoriaId, e.Estado }, "idx_productos_categoria_estado");
+
+            entity.HasIndex(e => e.Nombre, "idx_productos_nombre");
 
             entity.Property(e => e.Id).HasColumnName("id");
             entity.Property(e => e.CategoriaId).HasColumnName("categoriaId");
@@ -572,6 +347,7 @@ public partial class SyspharmaContext : IdentityDbContext<IdentityUser>
             entity.Property(e => e.Imagen).HasColumnName("imagen");
             entity.Property(e => e.Nombre)
                 .HasMaxLength(200)
+                .IsUnicode(false)
                 .HasColumnName("nombre");
             entity.Property(e => e.Precio)
                 .HasColumnType("decimal(12, 2)")
@@ -604,18 +380,20 @@ public partial class SyspharmaContext : IdentityDbContext<IdentityUser>
 
         modelBuilder.Entity<Proveedore>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__proveedo__3213E83F7D8E1645");
+            entity.HasKey(e => e.Id).HasName("PK__proveedo__3213E83FF3647DE3");
 
             entity.ToTable("proveedores");
 
-            entity.HasIndex(e => e.Nombre, "UQ__proveedo__72AFBCC694CE12AD").IsUnique();
+            entity.HasIndex(e => e.Nombre, "UQ__proveedo__72AFBCC6A995FAF4").IsUnique();
 
             entity.Property(e => e.Id).HasColumnName("id");
             entity.Property(e => e.Ciudad)
                 .HasMaxLength(100)
+                .IsUnicode(false)
                 .HasColumnName("ciudad");
             entity.Property(e => e.Contacto)
                 .HasMaxLength(150)
+                .IsUnicode(false)
                 .HasColumnName("contacto");
             entity.Property(e => e.Direccion).HasColumnName("direccion");
             entity.Property(e => e.Email)
@@ -625,8 +403,12 @@ public partial class SyspharmaContext : IdentityDbContext<IdentityUser>
             entity.Property(e => e.Estado)
                 .HasDefaultValue(true)
                 .HasColumnName("estado");
+            entity.Property(e => e.FechaCreacion)
+                .HasDefaultValueSql("(getdate())")
+                .HasColumnName("fechaCreacion");
             entity.Property(e => e.Nombre)
                 .HasMaxLength(150)
+                .IsUnicode(false)
                 .HasColumnName("nombre");
             entity.Property(e => e.Telefono)
                 .HasMaxLength(20)
@@ -636,15 +418,11 @@ public partial class SyspharmaContext : IdentityDbContext<IdentityUser>
 
         modelBuilder.Entity<Role>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__roles__3213E83FE520A6C5");
+            entity.HasKey(e => e.Id).HasName("PK__roles__3213E83F51C39779");
 
             entity.ToTable("roles");
 
-            entity.HasIndex(e => e.Nombre, "UQ__roles__72AFBCC6789C1F2F").IsUnique();
-
-            entity.HasIndex(e => e.Estado, "idx_roles_estado");
-
-            entity.HasIndex(e => e.Nombre, "idx_roles_nombre");
+            entity.HasIndex(e => e.Nombre, "UQ__roles__72AFBCC6521A905E").IsUnique();
 
             entity.Property(e => e.Id).HasColumnName("id");
             entity.Property(e => e.Descripcion).HasColumnName("descripcion");
@@ -662,15 +440,11 @@ public partial class SyspharmaContext : IdentityDbContext<IdentityUser>
 
         modelBuilder.Entity<RolesPermiso>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__roles_pe__3213E83F0EE21B98");
+            entity.HasKey(e => e.Id).HasName("PK__roles_pe__3213E83FA50D9FAE");
 
             entity.ToTable("roles_permisos");
 
-            entity.HasIndex(e => e.PermisoId, "idx_rolespermisos_permisoId");
-
-            entity.HasIndex(e => e.RoleId, "idx_rolespermisos_roleId");
-
-            entity.HasIndex(e => new { e.RoleId, e.PermisoId }, "unique_role_permiso").IsUnique();
+            entity.HasIndex(e => new { e.RoleId, e.PermisoId }, "UQ_Role_Permiso").IsUnique();
 
             entity.Property(e => e.Id).HasColumnName("id");
             entity.Property(e => e.FechaAsignacion)
@@ -690,7 +464,7 @@ public partial class SyspharmaContext : IdentityDbContext<IdentityUser>
 
         modelBuilder.Entity<Servicio>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__servicio__3213E83FEC352FDF");
+            entity.HasKey(e => e.Id).HasName("PK__servicio__3213E83FB57629D7");
 
             entity.ToTable("servicios");
 
@@ -716,6 +490,7 @@ public partial class SyspharmaContext : IdentityDbContext<IdentityUser>
                 .HasColumnName("pacienteDocumento");
             entity.Property(e => e.PacienteNombre)
                 .HasMaxLength(200)
+                .IsUnicode(false)
                 .HasColumnName("pacienteNombre");
             entity.Property(e => e.ServicioNombre)
                 .HasMaxLength(100)
@@ -735,12 +510,13 @@ public partial class SyspharmaContext : IdentityDbContext<IdentityUser>
 
             entity.HasOne(d => d.Turno).WithMany(p => p.Servicios)
                 .HasForeignKey(d => d.TurnoId)
+                .OnDelete(DeleteBehavior.SetNull)
                 .HasConstraintName("FK_Servicios_Turnos");
         });
 
         modelBuilder.Entity<Turno>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__turnos__3213E83FDE8CCB64");
+            entity.HasKey(e => e.Id).HasName("PK__turnos__3213E83FB24084EB");
 
             entity.ToTable("turnos");
 
@@ -794,17 +570,13 @@ public partial class SyspharmaContext : IdentityDbContext<IdentityUser>
 
         modelBuilder.Entity<Usuario>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__usuarios__3213E83F278FD5C8");
+            entity.HasKey(e => e.Id).HasName("PK__usuarios__3213E83F63D932E8");
 
             entity.ToTable("usuarios");
 
-            entity.HasIndex(e => e.Documento, "UQ__usuarios__A25B3E61A900D650").IsUnique();
+            entity.HasIndex(e => e.Documento, "UQ__usuarios__A25B3E610866FD8A").IsUnique();
 
-            entity.HasIndex(e => e.Email, "UQ__usuarios__AB6E616461D1B7DB").IsUnique();
-
-            entity.HasIndex(e => e.Email, "idx_usuarios_email");
-
-            entity.HasIndex(e => e.RoleId, "idx_usuarios_roleId");
+            entity.HasIndex(e => e.Email, "UQ__usuarios__AB6E61648B7D3B4E").IsUnique();
 
             entity.Property(e => e.Id).HasColumnName("id");
             entity.Property(e => e.Avatar).HasColumnName("avatar");
@@ -824,6 +596,7 @@ public partial class SyspharmaContext : IdentityDbContext<IdentityUser>
                 .HasColumnName("fechaCreacion");
             entity.Property(e => e.Nombre)
                 .HasMaxLength(150)
+                .IsUnicode(false)
                 .HasColumnName("nombre");
             entity.Property(e => e.Password)
                 .HasMaxLength(255)
@@ -846,6 +619,26 @@ public partial class SyspharmaContext : IdentityDbContext<IdentityUser>
                 .HasConstraintName("FK_Usuarios_Roles");
         });
 
+        modelBuilder.Entity<VCompraDetalle>(entity =>
+        {
+            entity
+                .HasNoKey()
+                .ToView("v_compra_detalles");
+
+            entity.Property(e => e.Cantidad).HasColumnName("cantidad");
+            entity.Property(e => e.CompraId).HasColumnName("compraId");
+            entity.Property(e => e.Id)
+                .ValueGeneratedOnAdd()
+                .HasColumnName("id");
+            entity.Property(e => e.PrecioUnitario)
+                .HasColumnType("decimal(12, 2)")
+                .HasColumnName("precioUnitario");
+            entity.Property(e => e.ProductoId).HasColumnName("productoId");
+            entity.Property(e => e.SubtotalCalculado)
+                .HasColumnType("decimal(23, 2)")
+                .HasColumnName("subtotal_calculado");
+        });
+
         modelBuilder.Entity<VResumenTurno>(entity =>
         {
             entity
@@ -854,6 +647,7 @@ public partial class SyspharmaContext : IdentityDbContext<IdentityUser>
 
             entity.Property(e => e.Empleado)
                 .HasMaxLength(150)
+                .IsUnicode(false)
                 .HasColumnName("empleado");
             entity.Property(e => e.Estado)
                 .HasMaxLength(20)
@@ -873,13 +667,36 @@ public partial class SyspharmaContext : IdentityDbContext<IdentityUser>
                 .HasColumnName("totalVentas");
         });
 
+        modelBuilder.Entity<VVentaDetalle>(entity =>
+        {
+            entity
+                .HasNoKey()
+                .ToView("v_venta_detalles");
+
+            entity.Property(e => e.Cantidad).HasColumnName("cantidad");
+            entity.Property(e => e.Descuento)
+                .HasColumnType("decimal(12, 2)")
+                .HasColumnName("descuento");
+            entity.Property(e => e.Id)
+                .ValueGeneratedOnAdd()
+                .HasColumnName("id");
+            entity.Property(e => e.PrecioUnitario)
+                .HasColumnType("decimal(12, 2)")
+                .HasColumnName("precioUnitario");
+            entity.Property(e => e.ProductoId).HasColumnName("productoId");
+            entity.Property(e => e.SubtotalCalculado)
+                .HasColumnType("decimal(23, 2)")
+                .HasColumnName("subtotal_calculado");
+            entity.Property(e => e.VentaId).HasColumnName("ventaId");
+        });
+
         modelBuilder.Entity<Venta>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__ventas__3213E83F2F14C49F");
+            entity.HasKey(e => e.Id).HasName("PK__ventas__3213E83FF7A5F5E7");
 
             entity.ToTable("ventas");
 
-            entity.HasIndex(e => e.NumeroVenta, "UQ__ventas__44FDAC49F683221F").IsUnique();
+            entity.HasIndex(e => e.NumeroVenta, "UQ__ventas__44FDAC49AB629988").IsUnique();
 
             entity.HasIndex(e => new { e.TurnoId, e.FechaVenta }, "idx_ventas_turno_fecha").IsDescending(false, true);
 
@@ -941,7 +758,7 @@ public partial class SyspharmaContext : IdentityDbContext<IdentityUser>
 
         modelBuilder.Entity<VentaDetalle>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__venta_de__3213E83F5B73A172");
+            entity.HasKey(e => e.Id).HasName("PK__venta_de__3213E83FE252B299");
 
             entity.ToTable("venta_detalles");
 

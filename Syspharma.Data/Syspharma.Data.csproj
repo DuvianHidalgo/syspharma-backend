@@ -4,6 +4,7 @@
     <ProjectReference Include="..\Syspharma.Domain\Syspharma.Domain.csproj" />
   </ItemGroup>
 
+<<<<<<< HEAD
   <ItemGroup>
     <PackageReference Include="BCrypt.Net-Next" Version="4.0.3" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.0" />
@@ -18,6 +19,8 @@
     </PackageReference>
   </ItemGroup>
 
+=======
+>>>>>>> 9f0714582b2b235ca8255964f6549d0c00f4cc11
   <PropertyGroup>
     <TargetFramework>net9.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>

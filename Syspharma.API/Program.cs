@@ -1,8 +1,10 @@
-using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-using System.Text;
+using Syspharma.Business.Services;
 using Syspharma.Data.Context;
+using Syspharma.Data.Repositories;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -26,6 +28,17 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey!))
         };
     });
+
+
+// Usuarios
+builder.Services.AddScoped<IUsuarioRepository, UsuarioRepository>();
+builder.Services.AddScoped<IUsuarioService, UsuarioService>();
+
+// Roles
+builder.Services.AddScoped<IRolRepository, RolRepository>();
+builder.Services.AddScoped<IRolService, RolService>();
+
+builder.Services.AddControllers();
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();

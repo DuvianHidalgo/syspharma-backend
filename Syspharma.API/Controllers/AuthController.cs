@@ -13,19 +13,19 @@ namespace Syspharma.API.Controllers
     [Route("api/[controller]")]
     public class AuthController : ControllerBase
     {
-        private readonly SyspharmaContext _context;
+        private readonly SyspharmaContext _Context;
         private readonly IConfiguration _config;
 
-        public AuthController(SyspharmaContext context, IConfiguration config)
+        public AuthController(SyspharmaContext Context, IConfiguration config)
         {
-            _context = context;
+            _Context = Context;
             _config = config;
         }
 
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginDto dto)
         {
-            var usuario = await _context.Usuarios
+            var usuario = await _Context.Usuarios
                 .Include(u => u.Role)
                 .FirstOrDefaultAsync(u => u.Email == dto.Email && u.Estado == true);
 
@@ -39,7 +39,7 @@ namespace Syspharma.API.Controllers
         [HttpPost("register")]
 public async Task<IActionResult> Register([FromBody] RegisterDto dto)
 {
-    if (await _context.Usuarios.AnyAsync(u => u.Email == dto.Email))
+    if (await _Context.Usuarios.AnyAsync(u => u.Email == dto.Email))
         return BadRequest(new { message = "El email ya está registrado" });
 
     var usuario = new Usuario
@@ -55,8 +55,8 @@ public async Task<IActionResult> Register([FromBody] RegisterDto dto)
         FechaCreacion = DateTime.Now
     };
 
-    _context.Usuarios.Add(usuario);
-    await _context.SaveChangesAsync();
+    _Context.Usuarios.Add(usuario);
+    await _Context.SaveChangesAsync();
 
     return Ok(new { message = "Usuario registrado correctamente" });
 }

@@ -1,11 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Syspharma.Data.Entities;
 
 namespace Syspharma.Data.Context;
 
-public partial class SyspharmaContext : DbContext
+public partial class SyspharmaContext : IdentityDbContext<Usuario, IdentityRole<int>, int>
 {
     public SyspharmaContext()
     {
@@ -34,7 +36,7 @@ public partial class SyspharmaContext : DbContext
 
     public virtual DbSet<Proveedore> Proveedores { get; set; }
 
-    public virtual DbSet<Role> Roles { get; set; }
+    public virtual  new DbSet<Role> Roles { get; set; }
 
     public virtual DbSet<RolesPermiso> RolesPermisos { get; set; }
 
@@ -55,11 +57,12 @@ public partial class SyspharmaContext : DbContext
     public virtual DbSet<VentaDetalle> VentaDetalles { get; set; }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-#warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see https://go.microsoft.com/fwlink/?LinkId=723263.
-        => optionsBuilder.UseSqlServer("Server=DESKTOP-5BJJQ8K\\SQLEXPRESS;Database=syspharma;Trusted_Connection=True;TrustServerCertificate=True");
+        => optionsBuilder.UseSqlServer("Server=DESKTOP-SANTIAGOMADERA\\SQLEXPRESS;Database=syspharma;Trusted_Connection=True;TrustServerCertificate=True");
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        base.OnModelCreating(modelBuilder); // ✅ Primero siempre
+
         modelBuilder.Entity<Categoria>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("PK__categori__3213E83F9886B4BE");
@@ -140,7 +143,6 @@ public partial class SyspharmaContext : DbContext
             entity.ToTable("compras");
 
             entity.HasIndex(e => e.NumeroCompra, "UQ__compras__6EB8ED5122FC55F7").IsUnique();
-
             entity.HasIndex(e => e.ProveedorId, "idx_compras_proveedor");
 
             entity.Property(e => e.Id).HasColumnName("id");
@@ -326,9 +328,7 @@ public partial class SyspharmaContext : DbContext
             entity.ToTable("productos");
 
             entity.HasIndex(e => e.Sku, "UQ__producto__DDDF4BE705E56FDA").IsUnique();
-
             entity.HasIndex(e => new { e.CategoriaId, e.Estado }, "idx_productos_categoria_estado");
-
             entity.HasIndex(e => e.Nombre, "idx_productos_nombre");
 
             entity.Property(e => e.Id).HasColumnName("id");
@@ -570,38 +570,24 @@ public partial class SyspharmaContext : DbContext
 
         modelBuilder.Entity<Usuario>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__usuarios__3213E83F63D932E8");
-
             entity.ToTable("usuarios");
 
-            entity.HasIndex(e => e.Documento, "UQ__usuarios__A25B3E610866FD8A").IsUnique();
-
-            entity.HasIndex(e => e.Email, "UQ__usuarios__AB6E61648B7D3B4E").IsUnique();
-
-            entity.Property(e => e.Id).HasColumnName("id");
+            // Solo propiedades personalizadas, Identity maneja Id, Email, UserName, etc.
+            entity.Property(e => e.Nombre)
+                .HasMaxLength(150)
+                .IsUnicode(false)
+                .HasColumnName("nombre");
             entity.Property(e => e.Avatar).HasColumnName("avatar");
             entity.Property(e => e.Documento)
                 .HasMaxLength(20)
                 .IsUnicode(false)
                 .HasColumnName("documento");
-            entity.Property(e => e.Email)
-                .HasMaxLength(100)
-                .IsUnicode(false)
-                .HasColumnName("email");
             entity.Property(e => e.Estado)
                 .HasDefaultValue(true)
                 .HasColumnName("estado");
             entity.Property(e => e.FechaCreacion)
                 .HasDefaultValueSql("(getdate())")
                 .HasColumnName("fechaCreacion");
-            entity.Property(e => e.Nombre)
-                .HasMaxLength(150)
-                .IsUnicode(false)
-                .HasColumnName("nombre");
-            entity.Property(e => e.Password)
-                .HasMaxLength(255)
-                .IsUnicode(false)
-                .HasColumnName("password");
             entity.Property(e => e.RoleId).HasColumnName("roleId");
             entity.Property(e => e.Telefono)
                 .HasMaxLength(20)
@@ -697,7 +683,6 @@ public partial class SyspharmaContext : DbContext
             entity.ToTable("ventas");
 
             entity.HasIndex(e => e.NumeroVenta, "UQ__ventas__44FDAC49AB629988").IsUnique();
-
             entity.HasIndex(e => new { e.TurnoId, e.FechaVenta }, "idx_ventas_turno_fecha").IsDescending(false, true);
 
             entity.Property(e => e.Id).HasColumnName("id");

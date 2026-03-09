@@ -1,10 +1,13 @@
-ï»¿using Microsoft.AspNetCore.Mvc;
+using System;
+using System.Net;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using System.Text.Json.Serialization;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Caching.Memory;
 using System.Security.Cryptography;
 using Microsoft.AspNetCore.Identity;
@@ -23,10 +26,10 @@ namespace Syspharma.API.Controllers
         private readonly ILogger<AuthController> _logger;
         private readonly IMemoryCache _cache;
         private readonly IEmailSender _emailSender;
-        private readonly UserManager<Usuario> _userManager;
 
-        public AuthController(SyspharmaContext context, IConfiguration config, ILogger<AuthController> logger, IMemoryCache cache, IEmailSender emailSender, UserManager<Usuario> userManager) =>
-            (_context, _config, _logger, _cache, _emailSender, _userManager) = (context, config, logger, cache, emailSender, userManager);
+        // Constructor principal (sin UserManager)
+        public AuthController(SyspharmaContext context, IConfiguration config, ILogger<AuthController> logger, IMemoryCache cache, IEmailSender emailSender) =>
+            (_context, _config, _logger, _cache, _emailSender) = (context, config, logger, cache, emailSender);
 
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginDto dto)
@@ -35,11 +38,7 @@ namespace Syspharma.API.Controllers
                 .Include(u => u.Role)
                 .FirstOrDefaultAsync(u => u.Email == dto.Email && u.Estado == true);
 
-            if (usuario == null)
-                return Unauthorized(new { message = "Credenciales incorrectas" });
-
-            var passwordValido = await _userManager.CheckPasswordAsync(usuario, dto.Password);
-            if (!passwordValido)
+            if (usuario == null || !BCrypt.Net.BCrypt.Verify(dto.Password, usuario.Password))
                 return Unauthorized(new { message = "Credenciales incorrectas" });
 
             var token = GenerarToken(usuario);
@@ -58,16 +57,16 @@ namespace Syspharma.API.Controllers
                 return BadRequest(new { message = "Nombre, email y password son obligatorios" });
 
             if (!await _context.Database.CanConnectAsync())
-                return StatusCode(503, new { message = "No se puede conectar a la base de datos. Intenta mÃ¡s tarde." });
+                return StatusCode(503, new { message = "No se puede conectar a la base de datos. Intenta más tarde." });
 
             if (await _context.Usuarios.AnyAsync(u => u.Email == dto.Email))
-                return BadRequest(new { message = "El email ya estÃ¡ registrado" });
+                return BadRequest(new { message = "El email ya está registrado" });
 
             var usuario = new Usuario
             {
                 Nombre = dto.Nombre,
                 Email = dto.Email,
-                UserName = dto.Email,
+                Password = BCrypt.Net.BCrypt.HashPassword(dto.Password),
                 RoleId = dto.RoleId,
                 Documento = string.IsNullOrEmpty(dto.Documento) ? null : dto.Documento,
                 TipoDocumento = dto.TipoDocumento,
@@ -76,9 +75,22 @@ namespace Syspharma.API.Controllers
                 FechaCreacion = DateTime.Now
             };
 
-            var resultado = await _userManager.CreateAsync(usuario, dto.Password);
-            if (!resultado.Succeeded)
-                return BadRequest(resultado.Errors);
+            _context.Usuarios.Add(usuario);
+
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateException dbEx)
+            {
+                _logger.LogError(dbEx, "Error al guardar usuario");
+                return StatusCode(500, new { message = "Error al guardar el usuario en la base de datos" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error inesperado en Register");
+                return StatusCode(500, new { message = "Error inesperado" });
+            }
 
             return Ok(new { message = "Usuario registrado correctamente" });
         }
@@ -89,68 +101,41 @@ namespace Syspharma.API.Controllers
             if (string.IsNullOrWhiteSpace(dto.Email))
                 return BadRequest(new { message = "Email requerido" });
 
-            var userEntity = await _context.Usuarios.FirstOrDefaultAsync(u => u.Email == dto.Email && u.Estado == true);
-            if (userEntity == null)
+            // Buscar el usuario por email usando el DbContext (la app no usa Identity actualmente)
+            var user = await _context.Usuarios.FirstOrDefaultAsync(u => u.Email == dto.Email && u.Estado == true);
+            if (user == null)
                 return BadRequest(new { message = "No existe un usuario con ese email" });
 
+            // Generar código de 6 dígitos seguro
             var code = RandomNumberGenerator.GetInt32(100000, 1000000).ToString();
-            _cache.Set($"recovery_{dto.Email}", code, TimeSpan.FromMinutes(15));
 
+            // Guardar el código en la cache en vez de usar UserManager/Identity
+            _cache.Set($"recovery_{user.Id}", code, TimeSpan.FromMinutes(15));
+
+            // Crear el mensaje HTML
             var mensajeHtml = $@"
                 <div style='font-family: Arial, sans-serif; padding: 20px; border: 1px solid #e0e0e0; border-radius: 10px;'>
-                    <h2 style='color: #059669;'>RecuperaciÃ³n de ContraseÃ±a</h2>
-                    <p>Hola, <strong>{userEntity.Nombre}</strong>.</p>
-                    <p>Has solicitado restablecer tu contraseÃ±a. Usa el siguiente cÃ³digo en la aplicaciÃ³n:</p>
+                    <h2 style='color: #059669;'>Recuperación de Contraseña</h2>
+                    <p>Hola, <strong>{user.Nombre}</strong>.</p>
+                    <p>Has solicitado restablecer tu contraseña. Usa el siguiente código en la aplicación:</p>
                     <div style='background-color: #f3f4f6; padding: 15px; font-size: 24px; font-weight: bold; text-align: center; letter-spacing: 5px; border-radius: 5px;'>
                         {code}
                     </div>
-                    <p style='font-size: 12px; color: #6b7280; margin-top: 20px;'>VÃ¡lido por 15 minutos. Si no fuiste tÃº, ignora este mensaje.</p>
+                    <p style='font-size: 12px; color: #6b7280; margin-top: 20px;'>Si no fuiste tú, ignora este mensaje.</p>
                 </div>";
 
+            // Enviar el correo
             try
             {
-                await _emailSender.SendEmailAsync(userEntity.Email!, "Tu CÃ³digo de RecuperaciÃ³n", mensajeHtml);
-                _logger.LogInformation("CÃ³digo enviado a {Email}", userEntity.Email);
-                return Ok(new { message = "CÃ³digo enviado correctamente." });
+                await _emailSender.SendEmailAsync(user.Email, "Tu Código de Recuperación", mensajeHtml);
+                _logger.LogInformation("Código de recuperación enviado a {Email} (usuarioId: {Id})", user.Email, user.Id);
+                return Ok(new { message = "Código enviado correctamente." });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error enviando correo a {Email}", userEntity.Email);
+                _logger.LogError(ex, "Error enviando correo de recuperación a {Email}", user.Email);
                 return BadRequest($"Error enviando correo: {ex.Message}");
             }
-        }
-
-        [HttpPost("verify-code")]
-        public IActionResult VerifyCode([FromBody] VerifyCodeDto dto)
-        {
-            if (!_cache.TryGetValue($"recovery_{dto.Email}", out string? codeGuardado))
-                return BadRequest(new { message = "CÃ³digo expirado o no encontrado." });
-
-            if (codeGuardado?.Trim() != dto.Code.Trim())
-                return BadRequest(new { message = "CÃ³digo incorrecto." });
-
-            _cache.Remove($"recovery_{dto.Email}");
-
-            return Ok(new { message = "CÃ³digo verificado correctamente." });
-        }
-
-        [HttpPost("reset-password")]
-        public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordDto dto)
-        {
-            if (string.IsNullOrWhiteSpace(dto.Email) || string.IsNullOrWhiteSpace(dto.NewPassword))
-                return BadRequest(new { message = "Email y nueva contraseÃ±a son requeridos." });
-
-            var user = await _userManager.FindByEmailAsync(dto.Email);
-            if (user == null)
-                return BadRequest(new { message = "Usuario no encontrado." });
-
-            var token = await _userManager.GeneratePasswordResetTokenAsync(user);
-            var resultado = await _userManager.ResetPasswordAsync(user, token, dto.NewPassword);
-
-            if (!resultado.Succeeded)
-                return BadRequest(new { message = "Error al cambiar la contraseÃ±a.", errors = resultado.Errors });
-
-            return Ok(new { message = "ContraseÃ±a actualizada correctamente." });
         }
 
         private string GenerarToken(Usuario usuario)
@@ -158,7 +143,7 @@ namespace Syspharma.API.Controllers
             var claims = new[]
             {
                 new Claim(ClaimTypes.NameIdentifier, usuario.Id.ToString()),
-                new Claim(ClaimTypes.Email, usuario.Email!),
+                new Claim(ClaimTypes.Email, usuario.Email),
                 new Claim(ClaimTypes.Role, usuario.Role.Nombre)
             };
 
@@ -168,7 +153,7 @@ namespace Syspharma.API.Controllers
                 issuer: _config["Jwt:Issuer"],
                 audience: _config["Jwt:Audience"],
                 claims: claims,
-                expires: DateTime.Now.AddMinutes(Convert.ToDouble(_config["Jwt:ExpiresInMinutes"])),
+                expires: DateTime.Now.AddMinutes(Convert.ToDouble(_config["Jwt:ExpiresInMinutes"])) ,
                 signingCredentials: creds
             );
 
@@ -200,16 +185,3 @@ namespace Syspharma.API.Controllers
     {
         public string Email { get; set; } = null!;
     }
-
-    public class VerifyCodeDto
-    {
-        public string Email { get; set; } = null!;
-        public string Code { get; set; } = null!;
-    }
-
-    public class ResetPasswordDto
-    {
-        public string Email { get; set; } = null!;
-        public string NewPassword { get; set; } = null!;
-    }
-}

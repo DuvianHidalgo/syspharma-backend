@@ -1,7 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Syspharma.Business.Services;
 using Syspharma.Domain.DTOs;
-
 namespace Syspharma.API.Controllers
 {
     [ApiController]
@@ -9,7 +8,6 @@ namespace Syspharma.API.Controllers
     public class UsuarioController : ControllerBase
     {
         private readonly IUsuarioService _service;
-
         public UsuarioController(IUsuarioService service)
         {
             _service = service;
@@ -65,6 +63,20 @@ namespace Syspharma.API.Controllers
             {
                 var usuario = await _service.CambiarEstado(id, estado);
                 return Ok(usuario);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> Eliminar(int id)
+        {
+            try
+            {
+                await _service.Eliminar(id);
+                return Ok(new { message = "Usuario eliminado correctamente" });
             }
             catch (Exception ex)
             {

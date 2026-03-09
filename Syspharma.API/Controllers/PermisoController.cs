@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Syspharma.Business.Services;
 using Syspharma.Domain.DTOs;
-
 namespace Syspharma.API.Controllers
 {
     [ApiController]
@@ -35,6 +34,13 @@ namespace Syspharma.API.Controllers
         public async Task<IActionResult> Actualizar([FromBody] PermisoUpdateDto dto)
         {
             try { return Ok(await _service.Actualizar(dto)); }
+            catch (Exception ex) { return BadRequest(new { message = ex.Message }); }
+        }
+
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> Eliminar(int id)
+        {
+            try { await _service.Eliminar(id); return Ok(new { message = "Permiso eliminado correctamente" }); }
             catch (Exception ex) { return BadRequest(new { message = ex.Message }); }
         }
     }

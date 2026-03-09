@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Syspharma.Business.Services;
 using Syspharma.Domain.DTOs;
-
 namespace Syspharma.API.Controllers
 {
     [ApiController]
@@ -42,6 +41,13 @@ namespace Syspharma.API.Controllers
         public async Task<IActionResult> CambiarEstado(int id, [FromBody] bool estado)
         {
             try { await _service.CambiarEstado(id, estado); return Ok(new { message = "Estado actualizado" }); }
+            catch (Exception ex) { return BadRequest(new { message = ex.Message }); }
+        }
+
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> Eliminar(int id)
+        {
+            try { await _service.Eliminar(id); return Ok(new { message = "Rol eliminado correctamente" }); }
             catch (Exception ex) { return BadRequest(new { message = ex.Message }); }
         }
     }

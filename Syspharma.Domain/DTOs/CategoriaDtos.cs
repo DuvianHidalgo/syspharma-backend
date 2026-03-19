@@ -1,6 +1,6 @@
 ﻿namespace Syspharma.Domain.DTOs
 {
-    public class RolDto
+    public class CategoriaDto
     {
         public int Id { get; set; }
         public string Nombre { get; set; } = null!;
@@ -9,13 +9,13 @@
         public DateTime? FechaCreacion { get; set; }
     }
 
-    public class RolCreateDto
+    public class CategoriaCreateDto
     {
         public string Nombre { get; set; } = null!;
         public string? Descripcion { get; set; }
     }
 
-    public class RolUpdateDto
+    public class CategoriaUpdateDto
     {
         public int Id { get; set; }
         public string Nombre { get; set; } = null!;

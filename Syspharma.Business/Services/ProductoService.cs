@@ -1,0 +1,19 @@
+﻿using Syspharma.Data.Repositories;
+using Syspharma.Domain.DTOs;
+namespace Syspharma.Business.Services
+{
+    public class ProductoService : IProductoService
+    {
+        private readonly IProductoRepository _repository;
+        public ProductoService(IProductoRepository repository)
+        {
+            _repository = repository;
+        }
+        public Task<List<ProductoDto>> ObtenerTodos() => _repository.ObtenerTodos();
+        public Task<ProductoDto?> ObtenerPorId(int id) => _repository.ObtenerPorId(id);
+        public Task<ProductoDto> Crear(ProductoCreateDto dto) => _repository.Crear(dto);
+        public Task<ProductoDto> Actualizar(ProductoUpdateDto dto) => _repository.Actualizar(dto);
+        public Task<bool> CambiarEstado(int id, bool estado) => _repository.CambiarEstado(id, estado);
+        public Task<bool> Eliminar(int id) => _repository.Eliminar(id);
+    }
+}

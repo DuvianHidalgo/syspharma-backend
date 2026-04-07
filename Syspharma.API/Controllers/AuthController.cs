@@ -42,8 +42,24 @@ namespace Syspharma.API.Controllers
             if (!passwordValido)
                 return Unauthorized(new { message = "Credenciales incorrectas" });
 
+            // Obtener permisos del rol desde la BD
+            var permisos = await _context.RolesPermisos
+                .Where(rp => rp.RoleId == usuario.RoleId)
+                .Include(rp => rp.Permiso)
+                .Select(rp => rp.Permiso.Codigo)
+                .ToListAsync();
+
             var token = GenerarToken(usuario);
-            return Ok(new { token, usuario.Nombre, usuario.Email, rol = usuario.Role.Nombre });
+            return Ok(new
+            {
+                id = usuario.Id,
+                token,
+                usuario.Nombre,
+                usuario.Email,
+                rol = usuario.Role.Nombre,
+                rolId = usuario.RoleId,
+                permisos
+            });
         }
 
         [HttpPost("register")]
@@ -58,10 +74,13 @@ namespace Syspharma.API.Controllers
                 return BadRequest(new { message = "Nombre, email y password son obligatorios" });
 
             if (!await _context.Database.CanConnectAsync())
-                return StatusCode(503, new { message = "No se puede conectar a la base de datos. Intenta más tarde." });
+                return StatusCode(503, new { message = "No se puede conectar a la base de datos." });
 
             if (await _context.Usuarios.AnyAsync(u => u.Email == dto.Email))
                 return BadRequest(new { message = "El email ya está registrado" });
+
+            if (!string.IsNullOrEmpty(dto.Documento) && await _context.Usuarios.AnyAsync(u => u.Documento == dto.Documento))
+                return BadRequest(new { message = "El documento ya está registrado" });
 
             var usuario = new Usuario
             {
@@ -70,7 +89,7 @@ namespace Syspharma.API.Controllers
                 UserName = dto.Email,
                 RoleId = dto.RoleId,
                 Documento = string.IsNullOrEmpty(dto.Documento) ? null : dto.Documento,
-                TipoDocumento = dto.TipoDocumento,
+                TipoDocumentoId = dto.TipoDocumentoId,
                 Telefono = dto.Telefono,
                 Estado = true,
                 FechaCreacion = DateTime.Now
@@ -110,7 +129,6 @@ namespace Syspharma.API.Controllers
             try
             {
                 await _emailSender.SendEmailAsync(userEntity.Email!, "Tu Código de Recuperación", mensajeHtml);
-                _logger.LogInformation("Código enviado a {Email}", userEntity.Email);
                 return Ok(new { message = "Código enviado correctamente." });
             }
             catch (Exception ex)
@@ -130,7 +148,6 @@ namespace Syspharma.API.Controllers
                 return BadRequest(new { message = "Código incorrecto." });
 
             _cache.Remove($"recovery_{dto.Email}");
-
             return Ok(new { message = "Código verificado correctamente." });
         }
 
@@ -189,27 +206,11 @@ namespace Syspharma.API.Controllers
         public string Password { get; set; } = null!;
         public int RoleId { get; set; }
         public string? Documento { get; set; }
-
-        [JsonPropertyName("tipoDocumento")]
-        public string? TipoDocumento { get; set; }
-
+        public int? TipoDocumentoId { get; set; }
         public string? Telefono { get; set; }
     }
 
-    public class ForgotPasswordDto
-    {
-        public string Email { get; set; } = null!;
-    }
-
-    public class VerifyCodeDto
-    {
-        public string Email { get; set; } = null!;
-        public string Code { get; set; } = null!;
-    }
-
-    public class ResetPasswordDto
-    {
-        public string Email { get; set; } = null!;
-        public string NewPassword { get; set; } = null!;
-    }
+    public class ForgotPasswordDto { public string Email { get; set; } = null!; }
+    public class VerifyCodeDto { public string Email { get; set; } = null!; public string Code { get; set; } = null!; }
+    public class ResetPasswordDto { public string Email { get; set; } = null!; public string NewPassword { get; set; } = null!; }
 }

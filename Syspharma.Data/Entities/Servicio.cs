@@ -1,35 +1,18 @@
 ﻿using System;
 using System.Collections.Generic;
-
 namespace Syspharma.Data.Entities;
 
 public partial class Servicio
 {
     public int Id { get; set; }
-
-    public int? CitaId { get; set; }
-
-    public int MedicoId { get; set; }
-
-    public string MedicoNombre { get; set; } = null!;
-
-    public string PacienteNombre { get; set; } = null!;
-
-    public string? PacienteDocumento { get; set; }
-
-    public string? ServicioNombre { get; set; }
-
-    public decimal Monto { get; set; }
-
-    public int? TurnoId { get; set; }
-
-    public DateTime? FechaServicio { get; set; }
-
-    public string? Notas { get; set; }
-
-    public virtual Cita? Cita { get; set; }
-
-    public virtual Medico Medico { get; set; } = null!;
-
-    public virtual Turno? Turno { get; set; }
+    public string Nombre { get; set; } = null!;
+    public int CategoriaId { get; set; }
+    public decimal Precio { get; set; }
+    public int? Duracion { get; set; }
+    public string? Descripcion { get; set; }
+    public bool Estado { get; set; }
+    public DateTime? FechaCreacion { get; set; }
+    public virtual CategoriaServicio Categoria { get; set; } = null!;
+    public virtual ICollection<Cita> Cita { get; set; } = new List<Cita>();
+    public virtual ICollection<VentaDetalleServicio> VentaDetallesServicios { get; set; } = new List<VentaDetalleServicio>();
 }

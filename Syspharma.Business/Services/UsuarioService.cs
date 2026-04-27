@@ -1,7 +1,21 @@
 ﻿using Syspharma.Data.Repositories;
 using Syspharma.Domain.DTOs;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+
 namespace Syspharma.Business.Services
 {
+    // INTERFAZ INCLUIDA PARA QUE EL PROGRAM.CS LA ENCUENTRE
+    public interface IUsuarioService
+    {
+        Task<List<UsuarioDto>> ObtenerTodos();
+        Task<UsuarioDto?> ObtenerPorId(int id);
+        Task<UsuarioDto> Crear(UsuarioCreateDto dto);
+        Task<UsuarioDto> Actualizar(UsuarioUpdateDto dto);
+        Task<UsuarioDto> CambiarEstado(int id, bool estado);
+        Task<bool> Eliminar(int id);
+    }
+
     public class UsuarioService : IUsuarioService
     {
         private readonly IUsuarioRepository _repository;

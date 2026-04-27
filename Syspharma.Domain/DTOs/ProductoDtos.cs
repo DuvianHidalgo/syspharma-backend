@@ -11,8 +11,7 @@
         public string? ProveedorNombre { get; set; }
         public decimal Precio { get; set; }
         public decimal? PrecioCompra { get; set; }
-        public int? Stock { get; set; }
-        public string? Sku { get; set; }
+        public int Stock { get; set; }
         public string? CodigoBarras { get; set; }
         public string? Imagen { get; set; }
         public bool Estado { get; set; }
@@ -29,7 +28,6 @@
         public decimal Precio { get; set; }
         public decimal? PrecioCompra { get; set; }
         public int? Stock { get; set; }
-        public string? Sku { get; set; }
         public string? CodigoBarras { get; set; }
         public string? Imagen { get; set; }
     }
@@ -44,7 +42,6 @@
         public decimal Precio { get; set; }
         public decimal? PrecioCompra { get; set; }
         public int? Stock { get; set; }
-        public string? Sku { get; set; }
         public string? CodigoBarras { get; set; }
         public string? Imagen { get; set; }
     }

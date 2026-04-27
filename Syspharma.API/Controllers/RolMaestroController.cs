@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Syspharma.Business.Services;
 using Syspharma.Domain.DTOs;
+
 namespace Syspharma.API.Controllers
 {
     [ApiController]
@@ -14,41 +15,39 @@ namespace Syspharma.API.Controllers
         public RolMaestroController(IRolMaestroService service) => _service = service;
 
         [HttpGet]
-        public async Task<IActionResult> ObtenerTodos() => Ok(await _service.ObtenerTodos());
+        public async Task<IActionResult> GetAll() => Ok(await _service.ObtenerTodos());
 
         [HttpGet("{id}")]
-        public async Task<IActionResult> ObtenerPorId(int id)
-        {
-            var r = await _service.ObtenerPorId(id);
-            return r == null ? NotFound(new { message = "Rol no encontrado" }) : Ok(r);
-        }
+        public async Task<IActionResult> GetById(int id) => Ok(await _service.ObtenerPorId(id));
 
         [HttpPost]
-        public async Task<IActionResult> Crear([FromBody] RolCreateDto dto)
-        {
-            try { return Ok(await _service.Crear(dto)); }
-            catch (Exception ex) { return BadRequest(new { message = ex.Message }); }
-        }
+        public async Task<IActionResult> Create([FromBody] RolCreateDto dto) => Ok(await _service.Crear(dto));
 
         [HttpPut]
-        public async Task<IActionResult> Actualizar([FromBody] RolUpdateDto dto)
-        {
-            try { return Ok(await _service.Actualizar(dto)); }
-            catch (Exception ex) { return BadRequest(new { message = ex.Message }); }
-        }
-
-        [HttpPatch("{id}/estado")]
-        public async Task<IActionResult> CambiarEstado(int id, [FromBody] bool estado)
-        {
-            try { await _service.CambiarEstado(id, estado); return Ok(new { message = "Estado actualizado" }); }
-            catch (Exception ex) { return BadRequest(new { message = ex.Message }); }
-        }
+        public async Task<IActionResult> Update([FromBody] RolUpdateDto dto) => Ok(await _service.Actualizar(dto));
 
         [HttpDelete("{id}")]
-        public async Task<IActionResult> Eliminar(int id)
+        public async Task<IActionResult> Delete(int id)
         {
-            try { await _service.Eliminar(id); return Ok(new { message = "Rol eliminado correctamente" }); }
-            catch (Exception ex) { return BadRequest(new { message = ex.Message }); }
+            try 
+            {
+                var resultado = await _service.Eliminar(id);
+                if (!resultado) return NotFound(new { message = "El rol no existe" });
+                
+                return Ok(new { message = "Rol eliminado correctamente" });
+            }
+            catch (Exception ex) 
+            {
+                // Esto envía el mensaje de "No se puede eliminar..." al Frontend en el cuadrito rojo
+                return BadRequest(new { message = ex.Message }); 
+            }
         }
+
+        [HttpGet("{id}/permisos")]
+        public async Task<IActionResult> GetPermisos(int id) => Ok(await _service.ObtenerPermisos(id));
+
+        [HttpPost("{id}/permisos")]
+        public async Task<IActionResult> AssignPermisos(int id, [FromBody] List<string> permisos)
+            => Ok(await _service.AsignarPermisos(id, permisos));
     }
 }

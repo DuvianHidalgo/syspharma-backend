@@ -1,8 +1,5 @@
-﻿using System.Diagnostics.CodeAnalysis;
-
-namespace Syspharma.Domain.DTOs
+﻿namespace Syspharma.Domain.DTOs
 {
-    // Este es el que se envia al front, no pongo contraseña por seguridad
     public class UsuarioDto
     {
         public int Id { get; set; }
@@ -10,6 +7,7 @@ namespace Syspharma.Domain.DTOs
         public string Email { get; set; } = null!;
         public string? Documento { get; set; }
         public string? TipoDocumento { get; set; }
+        public int? TipoDocumentoId { get; set; }
         public string? Telefono { get; set; }
         public string RolNombre { get; set; } = null!;
         public string? Avatar { get; set; }

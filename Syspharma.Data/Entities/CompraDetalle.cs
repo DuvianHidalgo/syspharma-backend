@@ -15,6 +15,8 @@ public partial class CompraDetalle
 
     public decimal PrecioUnitario { get; set; }
 
+    public decimal Subtotal { get; set; }
+
     public virtual Compra Compra { get; set; } = null!;
 
     public virtual Producto Producto { get; set; } = null!;

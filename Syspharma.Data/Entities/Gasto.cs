@@ -13,15 +13,15 @@ public partial class Gasto
 
     public string Concepto { get; set; } = null!;
 
-    public decimal Monto { get; set; }
-
-    public string? Categoria { get; set; }
-
-    public DateTime? FechaGasto { get; set; }
-
     public string? Descripcion { get; set; }
 
+    public decimal Monto { get; set; }
+
+    public string Categoria { get; set; } = null!;
+
     public string? Comprobante { get; set; }
+
+    public DateTime? FechaGasto { get; set; }
 
     public virtual Turno Turno { get; set; } = null!;
 

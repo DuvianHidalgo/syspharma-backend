@@ -1,0 +1,181 @@
+﻿using Microsoft.EntityFrameworkCore;
+using Syspharma.Data.Context;
+using Syspharma.Data.Entities;
+using Syspharma.Domain.DTOs;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+
+namespace Syspharma.Data.Repositories
+{
+    public interface IPedidoRepository
+    {
+        Task<List<PedidoDto>> ObtenerTodos();
+        Task<PedidoDto?> ObtenerPorId(int id);
+        Task<List<PedidoDto>> ObtenerPorUsuario(int usuarioId);
+        Task<PedidoDto> Crear(PedidoCreateDto dto);
+        Task<PedidoDto> Actualizar(PedidoUpdateDto dto);
+        Task<bool> CambiarEstado(int id, int estadoId);
+        Task<bool> Eliminar(int id);
+        Task<List<object>> ObtenerEstados();
+    }
+
+    public class PedidoRepository : IPedidoRepository
+    {
+        private readonly SyspharmaContext _context;
+        public PedidoRepository(SyspharmaContext context) => _context = context;
+
+        private static PedidoDto MapDto(Pedido p) => new PedidoDto
+        {
+            Id = p.Id,
+            NumeroPedido = p.NumeroPedido,
+            UsuarioId = p.UsuarioId,
+            UsuarioNombre = p.Usuario?.Nombre ?? "Cliente Web",
+            ClienteNombre = p.ClienteNombre,
+            ClienteDocumento = p.ClienteDocumento,
+            ClienteTelefono = p.ClienteTelefono,
+            ClienteEmail = p.ClienteEmail,
+            MetodoPagoId = p.MetodoPagoId,
+            MetodoPagoNombre = p.MetodoPago?.Nombre ?? "No definido",
+            EstadoId = p.EstadoId,
+            EstadoNombre = p.Estado?.Nombre ?? "Pendiente",
+            Subtotal = p.Subtotal,
+            Iva = p.Iva,
+            Total = p.Total,
+            Notas = p.Notas,
+            Origen = p.Origen,
+            FechaCreacion = p.FechaCreacion,
+            FechaEntrega = p.FechaEntrega,
+            Detalles = p.PedidoDetalles.Select(d => new PedidoDetalleDto
+            {
+                Id = d.Id,
+                ProductoId = d.ProductoId,
+                Nombre = d.Nombre,
+                Cantidad = d.Cantidad,
+                PrecioUnitario = d.PrecioUnitario,
+                Subtotal = d.Subtotal
+            }).ToList()
+        };
+
+        private string GenerarNumeroPedido() => $"PED-{DateTime.Now:yyyyMMdd}-{new Random().Next(1000, 9999)}";
+
+        public async Task<List<PedidoDto>> ObtenerTodos()
+        {
+            var pedidos = await _context.Pedidos
+                .Include(p => p.Usuario).Include(p => p.MetodoPago).Include(p => p.Estado).Include(p => p.PedidoDetalles)
+                .OrderByDescending(p => p.FechaCreacion).ToListAsync();
+            return pedidos.Select(MapDto).ToList();
+        }
+
+        public async Task<List<PedidoDto>> ObtenerPorUsuario(int usuarioId)
+        {
+            var pedidos = await _context.Pedidos
+                .Include(p => p.Usuario).Include(p => p.Estado).Include(p => p.PedidoDetalles)
+                .Where(p => p.UsuarioId == usuarioId).OrderByDescending(p => p.FechaCreacion).ToListAsync();
+            return pedidos.Select(MapDto).ToList();
+        }
+
+        public async Task<PedidoDto?> ObtenerPorId(int id)
+        {
+            var p = await _context.Pedidos
+                .Include(p => p.Usuario).Include(p => p.MetodoPago).Include(p => p.Estado).Include(p => p.PedidoDetalles)
+                .FirstOrDefaultAsync(p => p.Id == id);
+            return p == null ? null : MapDto(p);
+        }
+
+        public async Task<PedidoDto> Crear(PedidoCreateDto dto)
+        {
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            try
+            {
+                var estadoPendiente = await _context.EstadosPedidos.FirstOrDefaultAsync(e => e.Nombre == "Pendiente")
+                    ?? throw new Exception("Estado inicial 'Pendiente' no encontrado.");
+
+                // VALIDACIÓN DE MÉTODO DE PAGO (Evita el error 400)
+                int idMetodoPago = (dto.MetodoPagoId.HasValue && dto.MetodoPagoId > 0) ? dto.MetodoPagoId.Value : 1;
+
+                decimal subtotal = dto.Detalles?.Sum(d => d.Cantidad * d.PrecioUnitario) ?? 0;
+                decimal iva = subtotal * (dto.PorcentajeIva / 100);
+
+                var pedido = new Pedido
+                {
+                    NumeroPedido = GenerarNumeroPedido(),
+                    // Forzamos la lectura del DTO
+                    UsuarioId = dto.UsuarioId,
+                    ClienteNombre = dto.ClienteNombre,
+                    ClienteEmail = dto.ClienteEmail,
+                    MetodoPagoId = idMetodoPago,
+                    EstadoId = estadoPendiente.Id,
+                    Subtotal = subtotal,
+                    Iva = iva,
+                    Total = subtotal + iva,
+                    Notas = dto.Notas ?? "Pedido realizado desde la web",
+                    Origen = "web",
+                    FechaCreacion = DateTime.Now,
+                    FechaEntrega = dto.FechaEntrega
+                };
+
+                _context.Pedidos.Add(pedido);
+                await _context.SaveChangesAsync();
+
+                if (dto.Detalles != null)
+                {
+                    foreach (var d in dto.Detalles)
+                    {
+                        _context.PedidoDetalles.Add(new PedidoDetalle
+                        {
+                            PedidoId = pedido.Id,
+                            ProductoId = d.ProductoId,
+                            Nombre = d.Nombre,
+                            Cantidad = d.Cantidad,
+                            PrecioUnitario = d.PrecioUnitario,
+                            Subtotal = d.Cantidad * d.PrecioUnitario
+                        });
+
+                        var producto = await _context.Productos.FindAsync(d.ProductoId);
+                        if (producto != null)
+                        {
+                            producto.Stock -= d.Cantidad;
+                            _context.Entry(producto).State = EntityState.Modified;
+                        }
+                    }
+                }
+
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+                return await ObtenerPorId(pedido.Id) ?? MapDto(pedido);
+            }
+            catch (Exception ex) { await transaction.RollbackAsync(); throw new Exception(ex.Message); }
+        }
+
+        public async Task<PedidoDto> Actualizar(PedidoUpdateDto dto)
+        {
+            var p = await _context.Pedidos.FindAsync(dto.Id) ?? throw new Exception("No encontrado");
+            p.ClienteNombre = dto.ClienteNombre; p.EstadoId = dto.EstadoId;
+            await _context.SaveChangesAsync();
+            return await ObtenerPorId(p.Id) ?? throw new Exception("Error");
+        }
+
+        public async Task<bool> CambiarEstado(int id, int estadoId)
+        {
+            var p = await _context.Pedidos.FindAsync(id);
+            if (p == null) return false;
+            p.EstadoId = estadoId;
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<bool> Eliminar(int id)
+        {
+            var p = await _context.Pedidos.Include(p => p.PedidoDetalles).FirstOrDefaultAsync(p => p.Id == id);
+            if (p == null) return false;
+            _context.PedidoDetalles.RemoveRange(p.PedidoDetalles);
+            _context.Pedidos.Remove(p);
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<List<object>> ObtenerEstados() => await _context.EstadosPedidos.Select(e => (object)new { e.Id, e.Nombre }).ToListAsync();
+    }
+}

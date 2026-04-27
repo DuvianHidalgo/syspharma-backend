@@ -19,15 +19,13 @@ public partial class Producto
 
     public decimal? PrecioCompra { get; set; }
 
-    public int? Stock { get; set; }
-
-    public string? Sku { get; set; }
+    public int Stock { get; set; }
 
     public string? CodigoBarras { get; set; }
 
     public string? Imagen { get; set; }
 
-    public bool? Estado { get; set; }
+    public bool Estado { get; set; }
 
     public DateTime? FechaCreacion { get; set; }
 
@@ -36,6 +34,8 @@ public partial class Producto
     public virtual Categoria Categoria { get; set; } = null!;
 
     public virtual ICollection<CompraDetalle> CompraDetalles { get; set; } = new List<CompraDetalle>();
+
+    public virtual ICollection<PedidoDetalle> PedidoDetalles { get; set; } = new List<PedidoDetalle>();
 
     public virtual Proveedore? Proveedor { get; set; }
 

@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
@@ -31,34 +32,43 @@ namespace Syspharma.API.Controllers
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginDto dto)
         {
+            // ✅ CORRECCIÓN: ThenInclude para cargar los permisos del rol
             var usuario = await _context.Usuarios
                 .Include(u => u.Role)
+                    .ThenInclude(r => r.RolesPermisos)
+                        .ThenInclude(rp => rp.Permiso)
                 .FirstOrDefaultAsync(u => u.Email == dto.Email && u.Estado == true);
 
             if (usuario == null)
-                return Unauthorized(new { message = "Credenciales incorrectas" });
+                return Unauthorized(new { message = "Credenciales incorrectas o usuario inactivo" });
 
             var passwordValido = await _userManager.CheckPasswordAsync(usuario, dto.Password);
             if (!passwordValido)
                 return Unauthorized(new { message = "Credenciales incorrectas" });
 
-            // Obtener permisos del rol desde la BD
-            var permisos = await _context.RolesPermisos
-                .Where(rp => rp.RoleId == usuario.RoleId)
-                .Include(rp => rp.Permiso)
+            // ✅ Ahora los permisos vienen del Include, sin segunda consulta
+            var permisos = usuario.Role?.RolesPermisos
                 .Select(rp => rp.Permiso.Codigo)
-                .ToListAsync();
+                .ToList() ?? new List<string>();
 
             var token = GenerarToken(usuario);
+            var expiresInMinutes = int.TryParse(_config["Jwt:ExpiresInMinutes"], out var m) ? m : 60;
+
             return Ok(new
             {
-                id = usuario.Id,
                 token,
-                usuario.Nombre,
-                usuario.Email,
-                rol = usuario.Role.Nombre,
-                rolId = usuario.RoleId,
-                permisos
+                expiresInMinutes,
+                user = new
+                {
+                    id = usuario.Id,
+                    usuario.Nombre,
+                    usuario.Email,
+                    rol = usuario.Role?.Nombre ?? "Sin Rol",
+                    rolId = usuario.RoleId,
+                    usuario.Avatar,
+                    usuario.Estado,
+                    permisos
+                }
             });
         }
 
@@ -176,16 +186,23 @@ namespace Syspharma.API.Controllers
             {
                 new Claim(ClaimTypes.NameIdentifier, usuario.Id.ToString()),
                 new Claim(ClaimTypes.Email, usuario.Email!),
-                new Claim(ClaimTypes.Role, usuario.Role.Nombre)
+                new Claim(ClaimTypes.Role, usuario.Role?.Nombre ?? "Sin Rol"),
+                new Claim("nombre", usuario.Nombre ?? "")
             };
 
-            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["Jwt:Key"]!));
+            var keyStr = _config["Jwt:Key"];
+            if (string.IsNullOrEmpty(keyStr)) throw new Exception("JWT Key no configurada en appsettings.json");
+
+            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(keyStr));
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+
+            var expires = DateTime.Now.AddMinutes(Convert.ToDouble(_config["Jwt:ExpiresInMinutes"] ?? "60"));
+
             var token = new JwtSecurityToken(
                 issuer: _config["Jwt:Issuer"],
                 audience: _config["Jwt:Audience"],
                 claims: claims,
-                expires: DateTime.Now.AddMinutes(Convert.ToDouble(_config["Jwt:ExpiresInMinutes"])),
+                expires: expires,
                 signingCredentials: creds
             );
 

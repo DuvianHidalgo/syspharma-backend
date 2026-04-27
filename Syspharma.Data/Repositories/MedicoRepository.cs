@@ -2,8 +2,23 @@
 using Syspharma.Data.Context;
 using Syspharma.Data.Entities;
 using Syspharma.Domain.DTOs;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+
 namespace Syspharma.Data.Repositories
 {
+    public interface IMedicoRepository
+    {
+        Task<List<MedicoDto>> ObtenerTodos();
+        Task<MedicoDto?> ObtenerPorId(int id);
+        Task<MedicoDto> Crear(MedicoCreateDto dto);
+        Task<MedicoDto> Actualizar(MedicoUpdateDto dto);
+        Task<bool> CambiarEstado(int id, bool estado);
+        Task<bool> Eliminar(int id);
+    }
+
     public class MedicoRepository : IMedicoRepository
     {
         private readonly SyspharmaContext _context;
@@ -21,7 +36,7 @@ namespace Syspharma.Data.Repositories
             HoraInicio = m.HoraInicio?.ToString("HH:mm"),
             HoraFin = m.HoraFin?.ToString("HH:mm"),
             Intervalo = m.Intervalo,
-            Estado = m.Estado ?? true,
+            Estado = m.Estado,
             FechaCreacion = m.FechaCreacion
         };
 
@@ -75,7 +90,7 @@ namespace Syspharma.Data.Repositories
         public async Task<bool> CambiarEstado(int id, bool estado)
         {
             var m = await _context.Medicos.FindAsync(id);
-            if (m == null) throw new Exception("Médico no encontrado");
+            if (m == null) return false;
             m.Estado = estado;
             await _context.SaveChangesAsync();
             return true;
@@ -84,7 +99,7 @@ namespace Syspharma.Data.Repositories
         public async Task<bool> Eliminar(int id)
         {
             var m = await _context.Medicos.FindAsync(id);
-            if (m == null) throw new Exception("Médico no encontrado");
+            if (m == null) return false;
             _context.Medicos.Remove(m);
             await _context.SaveChangesAsync();
             return true;

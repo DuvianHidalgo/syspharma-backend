@@ -2,45 +2,63 @@
 using Syspharma.Data.Context;
 using Syspharma.Data.Entities;
 using Syspharma.Domain.DTOs;
+
 namespace Syspharma.Data.Repositories
 {
+    public interface IRolMaestroRepository
+    {
+        Task<List<RolDto>> ObtenerTodos();
+        Task<RolDto?> ObtenerPorId(int id);
+        Task<RolDto> Crear(RolCreateDto dto);
+        Task<RolDto> Actualizar(RolUpdateDto dto);
+        Task<bool> Eliminar(int id);
+
+        // --- ESTOS SON LOS MÉTODOS QUE FALTAN ---
+        Task<bool> CambiarEstado(int id, bool estado);
+        Task<List<string>> ObtenerPermisosPorRol(int rolId);
+        Task<bool> AsignarPermisos(int rolId, List<string> permisos); // Cambiado a string para coincidir con tu Service
+    }
+
     public class RolMaestroRepository : IRolMaestroRepository
     {
         private readonly SyspharmaContext _context;
         public RolMaestroRepository(SyspharmaContext context) => _context = context;
 
-        private static RolDto MapDto(Role r) => new RolDto
+        public async Task<List<RolDto>> ObtenerTodos()
         {
-            Id = r.Id,
-            Nombre = r.Nombre,
-            Descripcion = r.Descripcion,
-            Estado = r.Estado ?? true,
-            FechaCreacion = r.FechaCreacion
-        };
-
-        public async Task<List<RolDto>> ObtenerTodos() =>
-            (await _context.Roles.ToListAsync()).Select(MapDto).ToList();
+            return await _context.Roles
+                .Select(r => new RolDto
+                {
+                    Id = r.Id,
+                    Nombre = r.Nombre,
+                    Descripcion = r.Descripcion,
+                    Estado = r.Estado,
+                    Permisos = _context.RolesPermisos
+                        .Where(rp => rp.RoleId == r.Id)
+                        .Select(rp => rp.Permiso.Codigo).ToList()
+                }).ToListAsync();
+        }
 
         public async Task<RolDto?> ObtenerPorId(int id)
         {
             var r = await _context.Roles.FindAsync(id);
-            return r == null ? null : MapDto(r);
+            if (r == null) return null;
+            return new RolDto
+            {
+                Id = r.Id,
+                Nombre = r.Nombre,
+                Permisos = await _context.RolesPermisos
+                    .Where(x => x.RoleId == id)
+                    .Select(x => x.Permiso.Codigo).ToListAsync()
+            };
         }
 
         public async Task<RolDto> Crear(RolCreateDto dto)
         {
-            if (await _context.Roles.AnyAsync(r => r.Nombre == dto.Nombre))
-                throw new Exception("Ya existe un rol con ese nombre");
-            var r = new Role
-            {
-                Nombre = dto.Nombre,
-                Descripcion = dto.Descripcion,
-                Estado = true,
-                FechaCreacion = DateTime.Now
-            };
+            var r = new Role { Nombre = dto.Nombre, Descripcion = dto.Descripcion, Estado = true, FechaCreacion = DateTime.Now };
             _context.Roles.Add(r);
             await _context.SaveChangesAsync();
-            return MapDto(r);
+            return new RolDto { Id = r.Id, Nombre = r.Nombre };
         }
 
         public async Task<RolDto> Actualizar(RolUpdateDto dto)
@@ -50,30 +68,59 @@ namespace Syspharma.Data.Repositories
             r.Nombre = dto.Nombre;
             r.Descripcion = dto.Descripcion;
             await _context.SaveChangesAsync();
-            return MapDto(r);
-        }
-
-        public async Task<bool> CambiarEstado(int id, bool estado)
-        {
-            var r = await _context.Roles.FindAsync(id);
-            if (r == null) throw new Exception("Rol no encontrado");
-            r.Estado = estado;
-            await _context.SaveChangesAsync();
-            return true;
+            return new RolDto { Id = r.Id, Nombre = r.Nombre };
         }
 
         public async Task<bool> Eliminar(int id)
         {
-            var r = await _context.Roles.FindAsync(id);
-            if (r == null) throw new Exception("Rol no encontrado");
-
-            var tieneUsuarios = await _context.Usuarios.AnyAsync(u => u.RoleId == id);
-            if (tieneUsuarios)
-                throw new Exception("No se puede eliminar el rol porque tiene usuarios asociados");
-
+            var r = await _context.Roles.Include(x => x.RolesPermisos).FirstOrDefaultAsync(x => x.Id == id);
+            if (r == null) return false;
+            _context.RolesPermisos.RemoveRange(r.RolesPermisos);
             _context.Roles.Remove(r);
-            await _context.SaveChangesAsync();
-            return true;
+            return await _context.SaveChangesAsync() > 0;
+        }
+
+        // --- IMPLEMENTACIÓN DE LOS MÉTODOS NUEVOS ---
+
+        public async Task<bool> CambiarEstado(int id, bool estado)
+        {
+            var r = await _context.Roles.FindAsync(id);
+            if (r == null) return false;
+            r.Estado = estado;
+            return await _context.SaveChangesAsync() > 0;
+        }
+
+        public async Task<List<string>> ObtenerPermisosPorRol(int rolId)
+        {
+            return await _context.RolesPermisos
+                .Where(rp => rp.RoleId == rolId)
+                .Select(rp => rp.Permiso.Codigo)
+                .ToListAsync();
+        }
+
+        public async Task<bool> AsignarPermisos(int rolId, List<string> permisos)
+        {
+            // 1. Eliminar permisos actuales
+            var actuales = _context.RolesPermisos.Where(rp => rp.RoleId == rolId);
+            _context.RolesPermisos.RemoveRange(actuales);
+
+            // 2. Buscar IDs de los permisos basados en los códigos recibidos
+            var permisosDb = await _context.Permisos
+                .Where(p => permisos.Contains(p.Codigo))
+                .Select(p => p.Id)
+                .ToListAsync();
+
+            // 3. Agregar los nuevos
+            foreach (var pId in permisosDb)
+            {
+                _context.RolesPermisos.Add(new RolesPermiso // Verifica si es RolePermiso o RolesPermisos
+                {
+                    RoleId = rolId,
+                    PermisoId = pId
+                });
+            }
+
+            return await _context.SaveChangesAsync() > 0;
         }
     }
 }

@@ -2,9 +2,24 @@
 using Syspharma.Data.Context;
 using Syspharma.Data.Entities;
 using Syspharma.Domain.DTOs;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace Syspharma.Data.Repositories
 {
+    // --- SE AGREGA LA INTERFAZ AQUÍ ---
+    public interface IProductoRepository
+    {
+        Task<List<ProductoDto>> ObtenerTodos();
+        Task<ProductoDto?> ObtenerPorId(int id);
+        Task<ProductoDto> Crear(ProductoCreateDto dto);
+        Task<ProductoDto> Actualizar(ProductoUpdateDto dto);
+        Task<bool> CambiarEstado(int id, bool estado);
+        Task<bool> Eliminar(int id);
+    }
+
     public class ProductoRepository : IProductoRepository
     {
         private readonly SyspharmaContext _context;
@@ -26,10 +41,9 @@ namespace Syspharma.Data.Repositories
             Precio = p.Precio,
             PrecioCompra = p.PrecioCompra,
             Stock = p.Stock,
-            Sku = p.Sku,
             CodigoBarras = p.CodigoBarras,
             Imagen = p.Imagen,
-            Estado = p.Estado ?? true,
+            Estado = p.Estado,
             FechaCreacion = p.FechaCreacion,
             UltimaActualizacion = p.UltimaActualizacion
         };
@@ -51,10 +65,9 @@ namespace Syspharma.Data.Repositories
                     Precio = p.Precio,
                     PrecioCompra = p.PrecioCompra,
                     Stock = p.Stock,
-                    Sku = p.Sku,
                     CodigoBarras = p.CodigoBarras,
                     Imagen = p.Imagen,
-                    Estado = p.Estado ?? true,
+                    Estado = p.Estado,
                     FechaCreacion = p.FechaCreacion,
                     UltimaActualizacion = p.UltimaActualizacion
                 })
@@ -67,8 +80,8 @@ namespace Syspharma.Data.Repositories
                 .Include(p => p.Categoria)
                 .Include(p => p.Proveedor)
                 .FirstOrDefaultAsync(p => p.Id == id);
-            if (p == null) return null;
-            return MapToDto(p);
+
+            return p == null ? null : MapToDto(p);
         }
 
         public async Task<ProductoDto> Crear(ProductoCreateDto dto)
@@ -82,7 +95,6 @@ namespace Syspharma.Data.Repositories
                 Precio = dto.Precio,
                 PrecioCompra = dto.PrecioCompra,
                 Stock = dto.Stock ?? 0,
-                Sku = dto.Sku,
                 CodigoBarras = dto.CodigoBarras,
                 Imagen = dto.Imagen,
                 Estado = true,
@@ -91,28 +103,14 @@ namespace Syspharma.Data.Repositories
             };
 
             _context.Productos.Add(producto);
-            try
-            {
-                await _context.SaveChangesAsync();
-            }
-            catch (Exception ex)
-            {
-                throw new Exception(ex.InnerException?.Message ?? ex.Message);
-            }
+            await _context.SaveChangesAsync();
 
-            await _context.Entry(producto).Reference(p => p.Categoria).LoadAsync();
-            if (producto.ProveedorId.HasValue)
-                await _context.Entry(producto).Reference(p => p.Proveedor).LoadAsync();
-
-            return MapToDto(producto);
+            return await ObtenerPorId(producto.Id) ?? MapToDto(producto);
         }
 
         public async Task<ProductoDto> Actualizar(ProductoUpdateDto dto)
         {
-            var producto = await _context.Productos
-                .Include(p => p.Categoria)
-                .Include(p => p.Proveedor)
-                .FirstOrDefaultAsync(p => p.Id == dto.Id);
+            var producto = await _context.Productos.FindAsync(dto.Id);
 
             if (producto == null)
                 throw new Exception("Producto no encontrado");
@@ -123,29 +121,19 @@ namespace Syspharma.Data.Repositories
             producto.ProveedorId = dto.ProveedorId;
             producto.Precio = dto.Precio;
             producto.PrecioCompra = dto.PrecioCompra;
-            producto.Stock = dto.Stock;
-            producto.Sku = dto.Sku;
+            producto.Stock = dto.Stock ?? producto.Stock;
             producto.CodigoBarras = dto.CodigoBarras;
             producto.Imagen = dto.Imagen;
             producto.UltimaActualizacion = DateTime.Now;
 
-            try
-            {
-                await _context.SaveChangesAsync();
-            }
-            catch (Exception ex)
-            {
-                throw new Exception(ex.InnerException?.Message ?? ex.Message);
-            }
-
-            return MapToDto(producto);
+            await _context.SaveChangesAsync();
+            return await ObtenerPorId(producto.Id) ?? MapToDto(producto);
         }
 
         public async Task<bool> CambiarEstado(int id, bool estado)
         {
             var producto = await _context.Productos.FindAsync(id);
-            if (producto == null)
-                throw new Exception("Producto no encontrado");
+            if (producto == null) return false;
 
             producto.Estado = estado;
             await _context.SaveChangesAsync();
@@ -155,8 +143,7 @@ namespace Syspharma.Data.Repositories
         public async Task<bool> Eliminar(int id)
         {
             var producto = await _context.Productos.FindAsync(id);
-            if (producto == null)
-                throw new Exception("Producto no encontrado");
+            if (producto == null) return false;
 
             _context.Productos.Remove(producto);
             await _context.SaveChangesAsync();

@@ -5,6 +5,16 @@ using Syspharma.Domain.DTOs;
 
 namespace Syspharma.Data.Repositories
 {
+    public interface IUsuarioRepository
+    {
+        Task<List<UsuarioDto>> ObtenerTodos();
+        Task<UsuarioDto?> ObtenerPorId(int id);
+        Task<UsuarioDto> Crear(UsuarioCreateDto dto);
+        Task<UsuarioDto> Actualizar(UsuarioUpdateDto dto);
+        Task<UsuarioDto> CambiarEstado(int id, bool estado); // <-- añadido
+        Task<bool> Eliminar(int id);
+    }
+
     public class UsuarioRepository : IUsuarioRepository
     {
         private readonly SyspharmaContext _context;
@@ -14,45 +24,40 @@ namespace Syspharma.Data.Repositories
             _context = context;
         }
 
+        private static UsuarioDto MapDto(Usuario u) => new UsuarioDto
+        {
+            Id = u.Id,
+            Nombre = u.Nombre,
+            Email = u.Email ?? string.Empty,
+            Documento = u.Documento,
+            TipoDocumento = u.TipoDocumento?.Nombre,
+            TipoDocumentoId = u.TipoDocumentoId,
+            Telefono = u.Telefono,
+            RolNombre = u.Role?.Nombre ?? "",
+            Avatar = u.Avatar,
+            Estado = u.Estado,
+            RolId = u.RoleId
+        };
+
         public async Task<List<UsuarioDto>> ObtenerTodos()
         {
+            // ✅ CAMBIO 1: quitar el filtro por Estado para devolver activos e inactivos
             var usuarios = await _context.Usuarios
                 .Include(u => u.Role)
+                .Include(u => u.TipoDocumento)
                 .ToListAsync();
-            return usuarios.Select(u => new UsuarioDto
-            {
-                Id = u.Id,
-                Nombre = u.Nombre,
-                Email = u.Email,
-                Documento = u.Documento,
-                TipoDocumento = u.TipoDocumento,
-                Telefono = u.Telefono,
-                RolNombre = u.Role?.Nombre ?? "",
-                Avatar = u.Avatar,
-                Estado = u.Estado ?? true,
-                RolId = u.RoleId
-            }).ToList();
+
+            return usuarios.Select(MapDto).ToList();
         }
 
         public async Task<UsuarioDto?> ObtenerPorId(int id)
         {
             var usuario = await _context.Usuarios
                 .Include(u => u.Role)
+                .Include(u => u.TipoDocumento)
                 .FirstOrDefaultAsync(u => u.Id == id && u.Estado == true);
             if (usuario == null) return null;
-            return new UsuarioDto
-            {
-                Id = usuario.Id,
-                Nombre = usuario.Nombre,
-                Email = usuario.Email,
-                Documento = usuario.Documento,
-                TipoDocumento = usuario.TipoDocumento,
-                Telefono = usuario.Telefono,
-                RolNombre = usuario.Role?.Nombre ?? "",
-                Avatar = usuario.Avatar,
-                Estado = usuario.Estado ?? true,
-                RolId = usuario.RoleId
-            };
+            return MapDto(usuario);
         }
 
         public async Task<UsuarioDto> Crear(UsuarioCreateDto dto)
@@ -65,7 +70,7 @@ namespace Syspharma.Data.Repositories
                 Nombre = dto.Nombre,
                 Email = dto.Email,
                 UserName = dto.Email,
-                TipoDocumento = dto.TipoDocumento,
+                TipoDocumentoId = dto.TipoDocumentoId,
                 Documento = dto.Documento,
                 Telefono = dto.Telefono,
                 RoleId = dto.RolId,
@@ -76,19 +81,10 @@ namespace Syspharma.Data.Repositories
             _context.Usuarios.Add(usuario);
             await _context.SaveChangesAsync();
 
-            return new UsuarioDto
-            {
-                Id = usuario.Id,
-                Nombre = usuario.Nombre,
-                Email = usuario.Email,
-                Documento = usuario.Documento,
-                TipoDocumento = usuario.TipoDocumento,
-                Telefono = usuario.Telefono,
-                RolNombre = usuario.Role?.Nombre ?? "",
-                Avatar = usuario.Avatar,
-                Estado = usuario.Estado ?? true,
-                RolId = usuario.RoleId
-            };
+            await _context.Entry(usuario).Reference(u => u.Role).LoadAsync();
+            await _context.Entry(usuario).Reference(u => u.TipoDocumento).LoadAsync();
+
+            return MapDto(usuario);
         }
 
         public async Task<UsuarioDto> Actualizar(UsuarioUpdateDto dto)
@@ -98,58 +94,34 @@ namespace Syspharma.Data.Repositories
 
             var usuario = await _context.Usuarios
                 .Include(u => u.Role)
+                .Include(u => u.TipoDocumento)
                 .FirstOrDefaultAsync(u => u.Id == dto.Id);
-            if (usuario == null) return null;
+            if (usuario == null) throw new Exception("Usuario no encontrado");
 
             usuario.Nombre = dto.Nombre;
             usuario.Email = dto.Email;
-            usuario.TipoDocumento = dto.TipoDocumento;
+            usuario.TipoDocumentoId = dto.TipoDocumentoId;
             usuario.Documento = dto.Documento;
             usuario.Telefono = dto.Telefono;
             usuario.RoleId = dto.RolId;
             usuario.Estado = dto.Estado;
 
             await _context.SaveChangesAsync();
-
-            return new UsuarioDto
-            {
-                Id = usuario.Id,
-                Nombre = usuario.Nombre,
-                Email = usuario.Email,
-                Documento = usuario.Documento,
-                TipoDocumento = usuario.TipoDocumento,
-                Telefono = usuario.Telefono,
-                RolNombre = usuario.Role?.Nombre ?? "",
-                Avatar = usuario.Avatar,
-                Estado = usuario.Estado ?? true,
-                RolId = usuario.RoleId
-            };
+            return MapDto(usuario);
         }
 
         public async Task<UsuarioDto> CambiarEstado(int id, bool estado)
         {
             var usuario = await _context.Usuarios
                 .Include(u => u.Role)
+                .Include(u => u.TipoDocumento)
                 .FirstOrDefaultAsync(u => u.Id == id);
             if (usuario == null)
                 throw new Exception("Usuario no encontrado");
 
             usuario.Estado = estado;
             await _context.SaveChangesAsync();
-
-            return new UsuarioDto
-            {
-                Id = usuario.Id,
-                Nombre = usuario.Nombre,
-                Email = usuario.Email,
-                Documento = usuario.Documento,
-                TipoDocumento = usuario.TipoDocumento,
-                Telefono = usuario.Telefono,
-                RolNombre = usuario.Role?.Nombre ?? "",
-                Avatar = usuario.Avatar,
-                Estado = usuario.Estado ?? true,
-                RolId = usuario.RoleId
-            };
+            return MapDto(usuario);
         }
 
         public async Task<bool> Eliminar(int id)
@@ -158,6 +130,7 @@ namespace Syspharma.Data.Repositories
             if (usuario == null)
                 throw new Exception("Usuario no encontrado");
 
+            // ✅ CAMBIO 2: borrado físico en la base de datos
             _context.Usuarios.Remove(usuario);
             await _context.SaveChangesAsync();
             return true;

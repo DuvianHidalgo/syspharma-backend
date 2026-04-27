@@ -1,35 +1,35 @@
+using System;
+using System.Text;
+using System.Text.Json;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Syspharma.API.Services;
+using Syspharma.Business.Mappings;
 using Syspharma.Business.Services;
 using Syspharma.Data.Context;
 using Syspharma.Data.Entities;
 using Syspharma.Data.Repositories;
-using System.Text;
-using System.Text.Json;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// DB
+// 1. DB
 builder.Services.AddDbContext<SyspharmaContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// Identity
+// 2. Identity
 builder.Services.AddIdentity<Usuario, IdentityRole<int>>(options =>
 {
     options.Password.RequireDigit = false;
-    options.Password.RequireLowercase = false;
-    options.Password.RequireUppercase = false;
-    options.Password.RequireNonAlphanumeric = false;
     options.Password.RequiredLength = 6;
 })
 .AddEntityFrameworkStores<SyspharmaContext>()
 .AddDefaultTokenProviders();
 
-// Forzar JWT como esquema por defecto (ignorar cookies de Identity)
+// 3. JWT
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -52,31 +52,25 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
-// Memory cache
-builder.Services.AddMemoryCache();
-
-// Email service
-builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection("EmailSettings"));
-builder.Services.AddTransient<IEmailSender, SmtpEmailSender>();
-
-// CORS
+// 4. CORS
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFront", policy =>
-        policy.AllowAnyOrigin()
-              .AllowAnyHeader()
-              .AllowAnyMethod());
+        policy.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod());
 });
 
-// JSON options
+// 5. Controllers
 builder.Services.AddControllers()
     .AddJsonOptions(opts =>
     {
-        opts.JsonSerializerOptions.PropertyNameCaseInsensitive = true;
         opts.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+        opts.JsonSerializerOptions.PropertyNameCaseInsensitive = true;
     });
 
-// Swagger
+// 6. AUTOMAPPER: usar todas las assemblies (cambio solicitado)
+builder.Services.AddAutoMapper(cfg => { }, AppDomain.CurrentDomain.GetAssemblies());
+
+// 7. SWAGGER
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
@@ -102,29 +96,48 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
-// Repositorios y servicios
+// 8. REGISTRO DE REPOSITORIOS Y SERVICIOS (DI)
+// Repositorios
 builder.Services.AddScoped<IUsuarioRepository, UsuarioRepository>();
-builder.Services.AddScoped<IUsuarioService, UsuarioService>();
-builder.Services.AddScoped<IRolRepository, RolRepository>();
-builder.Services.AddScoped<IRolService, RolService>();
-builder.Services.AddScoped<ICategoriaRepository, CategoriaRepository>();
-builder.Services.AddScoped<ICategoriaService, CategoriaService>();
-builder.Services.AddScoped<IProductoRepository, ProductoRepository>();
-builder.Services.AddScoped<IProductoService, ProductoService>();
-builder.Services.AddScoped<IProveedorRepository, ProveedorRepository>();
-builder.Services.AddScoped<IProveedorService, ProveedorService>();
-builder.Services.AddScoped<IMedicoRepository, MedicoRepository>();
-builder.Services.AddScoped<IMedicoService, MedicoService>();
 builder.Services.AddScoped<IRolMaestroRepository, RolMaestroRepository>();
-builder.Services.AddScoped<IRolMaestroService, RolMaestroService>();
+builder.Services.AddScoped<ICategoriaRepository, CategoriaRepository>();
+builder.Services.AddScoped<IProductoRepository, ProductoRepository>();
+builder.Services.AddScoped<IProveedorRepository, ProveedorRepository>();
+builder.Services.AddScoped<IMedicoRepository, MedicoRepository>();
 builder.Services.AddScoped<IPermisoRepository, PermisoRepository>();
+builder.Services.AddScoped<ICompraRepository, CompraRepository>();
+builder.Services.AddScoped<IVentaRepository, VentaRepository>();
+builder.Services.AddScoped<IPedidoRepository, PedidoRepository>();
+builder.Services.AddScoped<IServicioRepository, ServicioRepository>();
+builder.Services.AddScoped<ICitaRepository, CitaRepository>();
+builder.Services.AddScoped<ITurnoRepository, TurnoRepository>();
+builder.Services.AddScoped<IGastoRepository, GastoRepository>();
+
+// Servicios
+builder.Services.AddScoped<IUsuarioService, UsuarioService>();
+builder.Services.AddScoped<IRolMaestroService, RolMaestroService>();
+builder.Services.AddScoped<ICategoriaService, CategoriaService>();
+builder.Services.AddScoped<IProductoService, ProductoService>();
+builder.Services.AddScoped<IProveedorService, ProveedorService>();
+builder.Services.AddScoped<IMedicoService, MedicoService>();
 builder.Services.AddScoped<IPermisoService, PermisoService>();
+builder.Services.AddScoped<ICompraService, CompraService>();
+builder.Services.AddScoped<IVentaService, VentaService>();
+builder.Services.AddScoped<IPedidoService, PedidoService>();
+builder.Services.AddScoped<IServicioService, ServicioService>();
+builder.Services.AddScoped<ICitaService, CitaService>();
+builder.Services.AddScoped<ITurnoService, TurnoService>();
+builder.Services.AddScoped<IGastoService, GastoService>();
+
+builder.Services.AddMemoryCache();
+builder.Services.AddTransient<IEmailSender, SmtpEmailSender>();
 
 var app = builder.Build();
 
 app.UseRouting();
 app.UseHttpsRedirection();
 app.UseCors("AllowFront");
+
 app.UseAuthentication();
 app.UseAuthorization();
 
@@ -138,4 +151,5 @@ if (app.Environment.IsDevelopment())
 }
 
 app.MapControllers();
-app.Run();  
+
+app.Run();

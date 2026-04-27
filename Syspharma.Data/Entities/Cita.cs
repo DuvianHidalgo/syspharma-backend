@@ -17,21 +17,29 @@ public partial class Cita
 
     public string? PacienteEmail { get; set; }
 
-    public DateOnly Fecha { get; set; }
-
-    public TimeOnly Hora { get; set; }
-
     public string? ServicioNombre { get; set; }
 
     public decimal? Precio { get; set; }
 
-    public string? Estado { get; set; }
+    public int EstadoId { get; set; }
+
+    public DateOnly Fecha { get; set; }
+
+    public TimeOnly Hora { get; set; }
 
     public string? Notas { get; set; }
 
     public DateTime? FechaCreacion { get; set; }
 
+    public int? ServicioId { get; set; }
+
+    public int? UsuarioId { get; set; }
+
+    public virtual EstadosCitum Estado { get; set; } = null!;
+
     public virtual Medico Medico { get; set; } = null!;
 
-    public virtual ICollection<Servicio> Servicios { get; set; } = new List<Servicio>();
+    public virtual Servicio? Servicio { get; set; }
+
+    public virtual Usuario? Usuario { get; set; }
 }

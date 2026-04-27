@@ -25,11 +25,9 @@ public partial class Medico
 
     public int? Intervalo { get; set; }
 
-    public bool? Estado { get; set; }
+    public bool Estado { get; set; }
 
     public DateTime? FechaCreacion { get; set; }
 
     public virtual ICollection<Cita> Cita { get; set; } = new List<Cita>();
-
-    public virtual ICollection<Servicio> Servicios { get; set; } = new List<Servicio>();
 }

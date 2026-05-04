@@ -52,14 +52,18 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
-// 4. CORS
+// 4. Email
+builder.Services.Configure<EmailSettings>(
+    builder.Configuration.GetSection("EmailSettings"));
+
+// 5. CORS
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFront", policy =>
         policy.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod());
 });
 
-// 5. Controllers
+// 6. Controllers
 builder.Services.AddControllers()
     .AddJsonOptions(opts =>
     {
@@ -67,10 +71,10 @@ builder.Services.AddControllers()
         opts.JsonSerializerOptions.PropertyNameCaseInsensitive = true;
     });
 
-// 6. AUTOMAPPER: usar todas las assemblies (cambio solicitado)
+// 7. AutoMapper
 builder.Services.AddAutoMapper(cfg => { }, AppDomain.CurrentDomain.GetAssemblies());
 
-// 7. SWAGGER
+// 8. Swagger
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
@@ -96,8 +100,7 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
-// 8. REGISTRO DE REPOSITORIOS Y SERVICIOS (DI)
-// Repositorios
+// 9. Repositorios
 builder.Services.AddScoped<IUsuarioRepository, UsuarioRepository>();
 builder.Services.AddScoped<IRolMaestroRepository, RolMaestroRepository>();
 builder.Services.AddScoped<ICategoriaRepository, CategoriaRepository>();
@@ -113,7 +116,7 @@ builder.Services.AddScoped<ICitaRepository, CitaRepository>();
 builder.Services.AddScoped<ITurnoRepository, TurnoRepository>();
 builder.Services.AddScoped<IGastoRepository, GastoRepository>();
 
-// Servicios
+// 10. Servicios
 builder.Services.AddScoped<IUsuarioService, UsuarioService>();
 builder.Services.AddScoped<IRolMaestroService, RolMaestroService>();
 builder.Services.AddScoped<ICategoriaService, CategoriaService>();
@@ -129,6 +132,7 @@ builder.Services.AddScoped<ICitaService, CitaService>();
 builder.Services.AddScoped<ITurnoService, TurnoService>();
 builder.Services.AddScoped<IGastoService, GastoService>();
 
+// 11. Otros
 builder.Services.AddMemoryCache();
 builder.Services.AddTransient<IEmailSender, SmtpEmailSender>();
 

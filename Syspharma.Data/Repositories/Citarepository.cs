@@ -1,0 +1,127 @@
+﻿using Microsoft.EntityFrameworkCore;
+using Syspharma.Data.Context;
+using Syspharma.Data.Entities;
+using Syspharma.Domain.DTOs;
+
+namespace Syspharma.Data.Repositories
+{
+    // 1. LA INTERFAZ DEBE ESTAR ASÍ
+    public interface ICitaRepository
+    {
+        Task<List<CitaDto>> ObtenerTodos();
+        Task<CitaDto?> ObtenerPorId(int id);
+        Task<CitaDto> Crear(CitaCreateDto dto);
+        Task<CitaDto> Actualizar(CitaUpdateDto dto);
+        Task<bool> CambiarEstado(int id, int estadoId);
+        Task<bool> Eliminar(int id);
+        Task<List<CitaEstadoDto>> ObtenerEstados(); // <-- Debe ser CitaEstadoDto
+    }
+
+    public class CitaRepository : ICitaRepository
+    {
+        private readonly SyspharmaContext _context;
+        public CitaRepository(SyspharmaContext context) => _context = context;
+
+        private static CitaDto MapDto(Cita c) => new CitaDto
+        {
+            Id = c.Id,
+            MedicoId = c.MedicoId,
+            MedicoNombre = c.Medico?.Nombre ?? "Sin médico",
+            PacienteNombre = c.PacienteNombre,
+            PacienteDocumento = c.PacienteDocumento,
+            PacienteTelefono = c.PacienteTelefono,
+            PacienteEmail = c.PacienteEmail,
+            ServicioId = c.ServicioId,
+            ServicioNombre = c.Servicio?.Nombre ?? c.ServicioNombre ?? "Consulta",
+            Precio = c.Precio ?? c.Servicio?.Precio ?? 0,
+            EstadoId = c.EstadoId,
+            EstadoNombre = c.Estado?.Nombre ?? "Pendiente",
+            UsuarioId = c.UsuarioId,
+            UsuarioNombre = c.Usuario?.Nombre,
+            Fecha = c.Fecha.ToString("yyyy-MM-dd"),
+            Hora = c.Hora.ToString(@"hh\:mm"),
+            Notas = c.Notas,
+            FechaCreacion = c.FechaCreacion
+        };
+
+        public async Task<List<CitaDto>> ObtenerTodos()
+        {
+            var citas = await _context.Citas
+                .Include(c => c.Medico).Include(c => c.Estado)
+                .Include(c => c.Servicio).Include(c => c.Usuario)
+                .OrderByDescending(c => c.Fecha).ToListAsync();
+            return citas.Select(MapDto).ToList();
+        }
+
+        public async Task<CitaDto?> ObtenerPorId(int id)
+        {
+            var c = await _context.Citas
+                .Include(c => c.Medico).Include(c => c.Estado)
+                .Include(c => c.Servicio).Include(c => c.Usuario)
+                .FirstOrDefaultAsync(c => c.Id == id);
+            return c == null ? null : MapDto(c);
+        }
+
+        public async Task<CitaDto> Crear(CitaCreateDto dto)
+        {
+            var cita = new Cita
+            {
+                MedicoId = dto.MedicoId,
+                PacienteNombre = dto.PacienteNombre,
+                PacienteDocumento = dto.PacienteDocumento,
+                PacienteTelefono = dto.PacienteTelefono,
+                PacienteEmail = dto.PacienteEmail,
+                ServicioId = dto.ServicioId,
+                UsuarioId = dto.UsuarioId > 0 ? dto.UsuarioId : null,
+                EstadoId = 1,
+                Fecha = DateOnly.Parse(dto.Fecha),
+                Hora = TimeOnly.Parse(dto.Hora),
+                Notas = dto.Notas,
+                FechaCreacion = DateTime.Now
+            };
+            _context.Citas.Add(cita);
+            await _context.SaveChangesAsync();
+            return await ObtenerPorId(cita.Id) ?? MapDto(cita);
+        }
+
+        public async Task<CitaDto> Actualizar(CitaUpdateDto dto)
+        {
+            var cita = await _context.Citas.FindAsync(dto.Id) ?? throw new Exception("No existe");
+            cita.MedicoId = dto.MedicoId; cita.PacienteNombre = dto.PacienteNombre;
+            cita.EstadoId = dto.EstadoId; cita.Fecha = DateOnly.Parse(dto.Fecha);
+            cita.Hora = TimeOnly.Parse(dto.Hora);
+            await _context.SaveChangesAsync();
+            return await ObtenerPorId(cita.Id) ?? throw new Exception("Error");
+        }
+
+        public async Task<bool> CambiarEstado(int id, int estadoId)
+        {
+            var c = await _context.Citas.FindAsync(id);
+            if (c == null) return false;
+            c.EstadoId = estadoId;
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<bool> Eliminar(int id)
+        {
+            var c = await _context.Citas.FindAsync(id);
+            if (c == null) return false;
+            _context.Citas.Remove(c);
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        // 2. EL MÉTODO DEBE TENER ESTA FIRMA EXACTA
+        public async Task<List<CitaEstadoDto>> ObtenerEstados()
+        {
+            return await _context.EstadosCita
+                .Select(e => new CitaEstadoDto
+                {
+                    Id = e.Id,
+                    Nombre = e.Nombre
+                })
+                .ToListAsync();
+        }
+    }
+}

@@ -12,6 +12,7 @@ using Microsoft.AspNetCore.Identity;
 using Syspharma.Data.Context;
 using Syspharma.Data.Entities;
 using Syspharma.API.Services;
+using Syspharma.Domain.DTOs;
 
 namespace Syspharma.API.Controllers
 {
@@ -32,7 +33,7 @@ namespace Syspharma.API.Controllers
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginDto dto)
         {
-            // ✅ CORRECCIÓN: ThenInclude para cargar los permisos del rol
+            //  CORRECCIÓN: ThenInclude para cargar los permisos del rol
             var usuario = await _context.Usuarios
                 .Include(u => u.Role)
                     .ThenInclude(r => r.RolesPermisos)
@@ -46,7 +47,7 @@ namespace Syspharma.API.Controllers
             if (!passwordValido)
                 return Unauthorized(new { message = "Credenciales incorrectas" });
 
-            // ✅ Ahora los permisos vienen del Include, sin segunda consulta
+
             var permisos = usuario.Role?.RolesPermisos
                 .Select(rp => rp.Permiso.Codigo)
                 .ToList() ?? new List<string>();
@@ -110,6 +111,71 @@ namespace Syspharma.API.Controllers
                 return BadRequest(resultado.Errors);
 
             return Ok(new { message = "Usuario registrado correctamente" });
+        }
+
+        [HttpPut("{id:int}")]
+        public async Task<IActionResult> UpdateProfile(int id, [FromBody] Syspharma.Domain.DTOs.UsuarioUpdateDto dto)
+        {
+            // 1. Forzamos que ignore la validación de campos que React no edita en esta vista
+            ModelState.Remove("RoId");
+            ModelState.Remove("RolId");
+            ModelState.Remove("Estado");
+
+            // 2. Si aún hay errores en el modelo, te los devuelve detallados en la consola de React
+            if (!ModelState.IsValid)
+                return BadRequest(new { message = "Datos inválidos en el formulario", errors = ModelState });
+
+            // 3. Validación de seguridad en los IDs
+            if (id != dto.Id)
+                return BadRequest(new { message = "El ID del usuario no coincide con la URL" });
+
+            // 4. Buscar al usuario usando UserManager
+            var usuario = await _userManager.FindByIdAsync(id.ToString());
+            if (usuario == null)
+                return NotFound(new { message = "Usuario no encontrado" });
+
+            // 5. Validar si el correo cambió y si ya existe en otro usuario
+            if (usuario.Email != dto.Email)
+            {
+                var emailExiste = await _context.Usuarios.AnyAsync(u => u.Email == dto.Email && u.Id != id);
+                if (emailExiste)
+                    return BadRequest(new { message = "El correo electrónico ya está en uso por otro usuario" });
+
+                usuario.Email = dto.Email;
+                usuario.UserName = dto.Email;
+            }
+
+            // 6. Validar documento duplicado si se proporciona
+            if (!string.IsNullOrEmpty(dto.Documento))
+            {
+                var documentoExiste = await _context.Usuarios.AnyAsync(u => u.Documento == dto.Documento && u.Id != id);
+                if (documentoExiste)
+                    return BadRequest(new { message = "El documento ya se encuentra registrado" });
+            }
+
+            // 7. Mapear y concatenar Apellidos en el campo Nombre
+            usuario.Nombre = $"{dto.Nombre} {dto.Apellidos}".Trim();
+            usuario.TipoDocumentoId = dto.TipoDocumentoId;
+            usuario.Documento = string.IsNullOrEmpty(dto.Documento) ? null : dto.Documento;
+            usuario.Telefono = string.IsNullOrEmpty(dto.Telefono) ? null : dto.Telefono;
+
+            var resultado = await _userManager.UpdateAsync(usuario);
+            if (!resultado.Succeeded)
+                return BadRequest(new { message = "Error al actualizar el perfil", errors = resultado.Errors });
+
+            return Ok(new
+            {
+                message = "Perfil actualizado correctamente",
+                user = new
+                {
+                    id = usuario.Id,
+                    usuario.Nombre,
+                    usuario.Email,
+                    usuario.TipoDocumentoId,
+                    usuario.Documento,
+                    usuario.Telefono
+                }
+            });
         }
 
         [HttpPost("forgot-password")]

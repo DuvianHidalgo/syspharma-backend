@@ -5,7 +5,7 @@ using Syspharma.Domain.DTOs;
 
 namespace Syspharma.Data.Repositories
 {
-    // 1. LA INTERFAZ DEBE ESTAR ASÍ
+    // 1. LA INTERFAZ SE MANTIENE IGUAL
     public interface ICitaRepository
     {
         Task<List<CitaDto>> ObtenerTodos();
@@ -14,7 +14,7 @@ namespace Syspharma.Data.Repositories
         Task<CitaDto> Actualizar(CitaUpdateDto dto);
         Task<bool> CambiarEstado(int id, int estadoId);
         Task<bool> Eliminar(int id);
-        Task<List<CitaEstadoDto>> ObtenerEstados(); // <-- Debe ser CitaEstadoDto
+        Task<List<CitaEstadoDto>> ObtenerEstados();
     }
 
     public class CitaRepository : ICitaRepository
@@ -64,6 +64,11 @@ namespace Syspharma.Data.Repositories
 
         public async Task<CitaDto> Crear(CitaCreateDto dto)
         {
+            // --- NUEVO: Buscamos el servicio asociado para guardar su precio y nombre histórico ---
+            var servicio = await _context.Servicios.FindAsync(dto.ServicioId);
+            decimal? precioServicio = servicio?.Precio;
+            string? nombreServicio = servicio?.Nombre;
+
             var cita = new Cita
             {
                 MedicoId = dto.MedicoId,
@@ -72,6 +77,11 @@ namespace Syspharma.Data.Repositories
                 PacienteTelefono = dto.PacienteTelefono,
                 PacienteEmail = dto.PacienteEmail,
                 ServicioId = dto.ServicioId,
+
+                // Guardamos el precio y el nombre histórico del servicio en la cita
+                ServicioNombre = nombreServicio,
+                Precio = precioServicio,
+
                 UsuarioId = dto.UsuarioId > 0 ? dto.UsuarioId : null,
                 EstadoId = 1,
                 Fecha = DateOnly.Parse(dto.Fecha),
@@ -112,7 +122,6 @@ namespace Syspharma.Data.Repositories
             return true;
         }
 
-        // 2. EL MÉTODO DEBE TENER ESTA FIRMA EXACTA
         public async Task<List<CitaEstadoDto>> ObtenerEstados()
         {
             return await _context.EstadosCita

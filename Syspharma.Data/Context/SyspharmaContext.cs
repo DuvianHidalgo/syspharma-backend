@@ -31,6 +31,10 @@ public partial class SyspharmaContext : IdentityDbContext<Usuario, IdentityRole<
     public virtual DbSet<PedidoDetalle> PedidoDetalles { get; set; }
     public virtual DbSet<Permiso> Permisos { get; set; }
     public virtual DbSet<Producto> Productos { get; set; }
+
+    // --- NUEVA DBSET DE MEDICAMENTOS ---
+    public virtual DbSet<ProductoMedicamento> ProductoMedicamentos { get; set; }
+
     public virtual DbSet<Proveedore> Proveedores { get; set; }
     public virtual new DbSet<Role> Roles { get; set; }
     public virtual DbSet<RolesPermiso> RolesPermisos { get; set; }
@@ -43,7 +47,6 @@ public partial class SyspharmaContext : IdentityDbContext<Usuario, IdentityRole<
     public virtual DbSet<VVentaDetalle> VVentaDetalles { get; set; }
     public virtual DbSet<Venta> Ventas { get; set; }
     public virtual DbSet<VentaDetalle> VentaDetalles { get; set; }
-    // Nueva DbSet agregada
     public virtual DbSet<VentaDetalleServicio> VentaDetalleServicios { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -530,6 +533,33 @@ public partial class SyspharmaContext : IdentityDbContext<Usuario, IdentityRole<
                 .HasForeignKey(d => d.ServicioId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_VentaDetalleServicios_Servicios");
+        });
+
+        // --- NUEVA CONFIGURACIÓN PARA PRODUCTO MEDICAMENTO ---
+        modelBuilder.Entity<ProductoMedicamento>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK_producto_medicamento");
+            entity.ToTable("producto_medicamento");
+
+            entity.Property(e => e.Id).HasColumnName("id");
+            entity.Property(e => e.ProductoId).HasColumnName("productoId");
+            entity.Property(e => e.Composicion).HasColumnName("composicion");
+            entity.Property(e => e.Concentracion).HasColumnName("concentracion");
+            entity.Property(e => e.Presentacion).HasColumnName("presentacion");
+            entity.Property(e => e.ViaAdministracion).HasColumnName("viaAdministracion");
+            entity.Property(e => e.RegistroSanitario).HasColumnName("registroSanitario");
+
+            // Mapeo explícito a BIT de SQL Server
+            entity.Property(e => e.RequiereFormula)
+                .HasColumnName("requiereFormula")
+                .HasColumnType("bit");
+
+            // Configurar la relación Uno a Uno opcional
+            entity.HasOne(d => d.Producto)
+                .WithOne(p => p.ProductoMedicamento)
+                .HasForeignKey<ProductoMedicamento>(d => d.ProductoId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("FK_ProductoMedicamento_Productos");
         });
 
         OnModelCreatingPartial(modelBuilder);

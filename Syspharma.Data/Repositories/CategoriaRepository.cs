@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
@@ -85,6 +86,21 @@ namespace Syspharma.Data.Repositories
         {
             var c = await _context.Categorias.FindAsync(id);
             if (c == null) return false;
+
+            // --- NUEVO: Validar si la categoría está en uso por algún producto ---
+            var tieneProductos = await _context.Productos.AnyAsync(p => p.CategoriaId == id);
+            if (tieneProductos)
+            {
+                throw new Exception("No se puede eliminar la categoría porque está relacionada a un producto.");
+            }
+
+            // --- NUEVO: Validar si la categoría está en uso por algún servicio ---
+            var tieneServicios = await _context.Servicios.AnyAsync(s => s.CategoriaId == id);
+            if (tieneServicios)
+            {
+                throw new Exception("No se puede eliminar la categoría porque está relacionada a un servicio.");
+            }
+
             _context.Categorias.Remove(c);
             await _context.SaveChangesAsync();
             return true;

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Syspharma.Business.Services;
 using Syspharma.Domain.DTOs;
+
 namespace Syspharma.API.Controllers
 {
     [ApiController]
@@ -36,6 +37,7 @@ namespace Syspharma.API.Controllers
         {
             try
             {
+                // El DTO recibido ya contiene opcionalmente las propiedades 'EsMedicamento' y 'Medicamento'
                 var result = await _service.Crear(dto);
                 return Ok(result);
             }
@@ -50,6 +52,7 @@ namespace Syspharma.API.Controllers
         {
             try
             {
+                // Permite actualizar los datos básicos y los detalles de medicamento en una sola llamada
                 var result = await _service.Actualizar(dto);
                 return Ok(result);
             }

@@ -26,6 +26,8 @@ public partial class SyspharmaContext : IdentityDbContext<Usuario, IdentityRole<
     public virtual DbSet<EstadosVentum> EstadosVenta { get; set; }
     public virtual DbSet<Gasto> Gastos { get; set; }
     public virtual DbSet<Medico> Medicos { get; set; }
+    public virtual DbSet<MedicoHorario> MedicoHorarios { get; set; }
+    public virtual DbSet<MedicoDiaNoDisponible> MedicoDiasNoDisponibles { get; set; }
     public virtual DbSet<MetodosPago> MetodosPagos { get; set; }
     public virtual DbSet<Pedido> Pedidos { get; set; }
     public virtual DbSet<PedidoDetalle> PedidoDetalles { get; set; }
@@ -215,6 +217,27 @@ public partial class SyspharmaContext : IdentityDbContext<Usuario, IdentityRole<
             entity.Property(e => e.Intervalo).HasDefaultValue(30).HasColumnName("intervalo");
             entity.Property(e => e.Nombre).HasMaxLength(150).HasColumnName("nombre");
             entity.Property(e => e.Telefono).HasMaxLength(20).HasColumnName("telefono");
+        });
+
+        modelBuilder.Entity<MedicoHorario>(entity =>
+        {
+            entity.ToTable("MedicoHorario");
+            entity.HasKey(e => e.Id);
+            entity.HasOne(e => e.Medico)
+                  .WithMany(m => m.Horarios)
+                  .HasForeignKey(e => e.MedicoId)
+                  .OnDelete(DeleteBehavior.Cascade);
+            entity.HasIndex(e => new { e.MedicoId, e.DiaSemana }).IsUnique();
+        });
+
+        modelBuilder.Entity<MedicoDiaNoDisponible>(entity =>
+        {
+            entity.ToTable("MedicoDiaNoDisponible");
+            entity.HasKey(e => e.Id);
+            entity.HasOne(e => e.Medico)
+                  .WithMany(m => m.DiasNoDisponibles)
+                  .HasForeignKey(e => e.MedicoId)
+                  .OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<MetodosPago>(entity =>

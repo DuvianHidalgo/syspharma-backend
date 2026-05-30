@@ -5,7 +5,7 @@ using Syspharma.Domain.DTOs;
 
 namespace Syspharma.Data.Repositories
 {
-    // 1. LA INTERFAZ SE MANTIENE IGUAL
+
     public interface ICitaRepository
     {
         Task<List<CitaDto>> ObtenerTodos();
@@ -14,7 +14,8 @@ namespace Syspharma.Data.Repositories
         Task<CitaDto> Actualizar(CitaUpdateDto dto);
         Task<bool> CambiarEstado(int id, int estadoId);
         Task<bool> Eliminar(int id);
-        Task<List<CitaEstadoDto>> ObtenerEstados();
+
+        Task<List<CitaEstadoDto>> ObtenerEstados(); 
     }
 
     public class CitaRepository : ICitaRepository
@@ -39,7 +40,7 @@ namespace Syspharma.Data.Repositories
             UsuarioId = c.UsuarioId,
             UsuarioNombre = c.Usuario?.Nombre,
             Fecha = c.Fecha.ToString("yyyy-MM-dd"),
-            Hora = c.Hora.ToString(@"hh\:mm"),
+            Hora = c.Hora.ToString(@"HH\:mm"),
             Notas = c.Notas,
             FechaCreacion = c.FechaCreacion
         };

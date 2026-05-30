@@ -9,7 +9,6 @@ using System.Threading.Tasks;
 
 namespace Syspharma.Data.Repositories
 {
-    // --- SE AGREGA LA INTERFAZ AQUÍ ---
     public interface IProductoRepository
     {
         Task<List<ProductoDto>> ObtenerTodos();
@@ -45,7 +44,20 @@ namespace Syspharma.Data.Repositories
             Imagen = p.Imagen,
             Estado = p.Estado,
             FechaCreacion = p.FechaCreacion,
-            UltimaActualizacion = p.UltimaActualizacion
+            UltimaActualizacion = p.UltimaActualizacion,
+
+            // --- NUEVO MAPEO DEL MEDICAMENTO ---
+            Medicamento = p.ProductoMedicamento != null ? new ProductoMedicamentoDto
+            {
+                Id = p.ProductoMedicamento.Id,
+                ProductoId = p.ProductoMedicamento.ProductoId,
+                Composicion = p.ProductoMedicamento.Composicion,
+                Concentracion = p.ProductoMedicamento.Concentracion,
+                Presentacion = p.ProductoMedicamento.Presentacion,
+                ViaAdministracion = p.ProductoMedicamento.ViaAdministracion,
+                RegistroSanitario = p.ProductoMedicamento.RegistroSanitario,
+                RequiereFormula = p.ProductoMedicamento.RequiereFormula
+            } : null
         };
 
         public async Task<List<ProductoDto>> ObtenerTodos()
@@ -53,6 +65,7 @@ namespace Syspharma.Data.Repositories
             return await _context.Productos
                 .Include(p => p.Categoria)
                 .Include(p => p.Proveedor)
+                .Include(p => p.ProductoMedicamento) // <-- NUEVO: Incluir medicamento
                 .Select(p => new ProductoDto
                 {
                     Id = p.Id,
@@ -69,7 +82,20 @@ namespace Syspharma.Data.Repositories
                     Imagen = p.Imagen,
                     Estado = p.Estado,
                     FechaCreacion = p.FechaCreacion,
-                    UltimaActualizacion = p.UltimaActualizacion
+                    UltimaActualizacion = p.UltimaActualizacion,
+
+                    // --- NUEVO: Proyección del medicamento en la lista ---
+                    Medicamento = p.ProductoMedicamento != null ? new ProductoMedicamentoDto
+                    {
+                        Id = p.ProductoMedicamento.Id,
+                        ProductoId = p.ProductoMedicamento.ProductoId,
+                        Composicion = p.ProductoMedicamento.Composicion,
+                        Concentracion = p.ProductoMedicamento.Concentracion,
+                        Presentacion = p.ProductoMedicamento.Presentacion,
+                        ViaAdministracion = p.ProductoMedicamento.ViaAdministracion,
+                        RegistroSanitario = p.ProductoMedicamento.RegistroSanitario,
+                        RequiereFormula = p.ProductoMedicamento.RequiereFormula
+                    } : null
                 })
                 .ToListAsync();
         }
@@ -79,6 +105,7 @@ namespace Syspharma.Data.Repositories
             var p = await _context.Productos
                 .Include(p => p.Categoria)
                 .Include(p => p.Proveedor)
+                .Include(p => p.ProductoMedicamento) // <-- NUEVO: Incluir medicamento
                 .FirstOrDefaultAsync(p => p.Id == id);
 
             return p == null ? null : MapToDto(p);
@@ -105,6 +132,24 @@ namespace Syspharma.Data.Repositories
             _context.Productos.Add(producto);
             await _context.SaveChangesAsync();
 
+            // --- NUEVO: Guardado de los detalles de medicamento ---
+            if (dto.EsMedicamento && dto.Medicamento != null)
+            {
+                var medicamento = new ProductoMedicamento
+                {
+                    ProductoId = producto.Id,
+                    Composicion = dto.Medicamento.Composicion,
+                    Concentracion = dto.Medicamento.Concentracion,
+                    Presentacion = dto.Medicamento.Presentacion,
+                    ViaAdministracion = dto.Medicamento.ViaAdministracion,
+                    RegistroSanitario = dto.Medicamento.RegistroSanitario,
+                    RequiereFormula = dto.Medicamento.RequiereFormula
+                };
+
+                _context.ProductoMedicamentos.Add(medicamento);
+                await _context.SaveChangesAsync();
+            }
+
             return await ObtenerPorId(producto.Id) ?? MapToDto(producto);
         }
 
@@ -127,6 +172,47 @@ namespace Syspharma.Data.Repositories
             producto.UltimaActualizacion = DateTime.Now;
 
             await _context.SaveChangesAsync();
+
+            // --- NUEVO: Gestión de actualización del detalle de medicamento ---
+            var medicamentoExistente = await _context.ProductoMedicamentos
+                .FirstOrDefaultAsync(pm => pm.ProductoId == producto.Id);
+
+            if (dto.EsMedicamento && dto.Medicamento != null)
+            {
+                if (medicamentoExistente == null)
+                {
+                    // Si antes era producto normal y ahora es medicamento, creamos el detalle
+                    var nuevoMedicamento = new ProductoMedicamento
+                    {
+                        ProductoId = producto.Id,
+                        Composicion = dto.Medicamento.Composicion,
+                        Concentracion = dto.Medicamento.Concentracion,
+                        Presentacion = dto.Medicamento.Presentacion,
+                        ViaAdministracion = dto.Medicamento.ViaAdministracion,
+                        RegistroSanitario = dto.Medicamento.RegistroSanitario,
+                        RequiereFormula = dto.Medicamento.RequiereFormula
+                    };
+                    _context.ProductoMedicamentos.Add(nuevoMedicamento);
+                }
+                else
+                {
+                    // Si ya existía, actualizamos sus campos adicionales
+                    medicamentoExistente.Composicion = dto.Medicamento.Composicion;
+                    medicamentoExistente.Concentracion = dto.Medicamento.Concentracion;
+                    medicamentoExistente.Presentacion = dto.Medicamento.Presentacion;
+                    medicamentoExistente.ViaAdministracion = dto.Medicamento.ViaAdministracion;
+                    medicamentoExistente.RegistroSanitario = dto.Medicamento.RegistroSanitario;
+                    medicamentoExistente.RequiereFormula = dto.Medicamento.RequiereFormula;
+                }
+                await _context.SaveChangesAsync();
+            }
+            else if (!dto.EsMedicamento && medicamentoExistente != null)
+            {
+                // Si ya no es medicamento, removemos el detalle de la base de datos
+                _context.ProductoMedicamentos.Remove(medicamentoExistente);
+                await _context.SaveChangesAsync();
+            }
+
             return await ObtenerPorId(producto.Id) ?? MapToDto(producto);
         }
 

@@ -40,6 +40,7 @@ namespace Syspharma.API.Controllers
             return res ? Ok(new { message = "Estado actualizado" }) : NotFound();
         }
 
+
         [HttpDelete("{id}")]
         public async Task<IActionResult> Eliminar(int id)
         {

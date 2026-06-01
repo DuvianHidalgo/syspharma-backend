@@ -23,6 +23,7 @@ namespace Syspharma.Domain.DTOs
         public string? ClienteDocumento { get; set; }
         public string? ClienteTelefono { get; set; }
         public string? ClienteEmail { get; set; }
+        public string? Direccion { get; set; }
         public int? MetodoPagoId { get; set; }
         public string? MetodoPagoNombre { get; set; }
         public int EstadoId { get; set; }
@@ -52,6 +53,7 @@ namespace Syspharma.Domain.DTOs
         public string? ClienteDocumento { get; set; }
         public string? ClienteTelefono { get; set; }
         public string? ClienteEmail { get; set; }
+        public string? Direccion { get; set; }
         public int? MetodoPagoId { get; set; } // Opcional para evitar error 400
         public decimal PorcentajeIva { get; set; } = 0;
         public string? Notas { get; set; }

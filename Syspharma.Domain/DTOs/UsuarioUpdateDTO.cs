@@ -9,6 +9,7 @@
         public string? Apellidos { get; set; } = null;
         public string Email { get; set; } = null!;
         public string? Telefono { get; set; }
+        public string? Direccion { get; set; }
         public int RolId { get; set; }
         public bool Estado { get; set; }
     }

@@ -5,10 +5,10 @@ namespace Syspharma.Business.Services
 {
     public interface IRolMaestroService
     {
-        Task<List<RolDto>> ObtenerTodos();
-        Task<RolDto?> ObtenerPorId(int id);
-        Task<RolDto> Crear(RolCreateDto dto);
-        Task<RolDto> Actualizar(RolUpdateDto dto);
+        Task<List<RolMaestroDto>> ObtenerTodos();
+        Task<RolMaestroDto?> ObtenerPorId(int id);
+        Task<RolMaestroDto> Crear(RolMaestroDto dto);
+        Task<RolMaestroDto> Actualizar(RolMaestroDto dto);
         Task<bool> CambiarEstado(int id, bool estado);
         Task<bool> Eliminar(int id);
         Task<List<string>> ObtenerPermisos(int rolId);
@@ -20,10 +20,10 @@ namespace Syspharma.Business.Services
         private readonly IRolMaestroRepository _repo;
         public RolMaestroService(IRolMaestroRepository repo) => _repo = repo;
 
-        public Task<List<RolDto>> ObtenerTodos() => _repo.ObtenerTodos();
-        public Task<RolDto?> ObtenerPorId(int id) => _repo.ObtenerPorId(id);
-        public Task<RolDto> Crear(RolCreateDto dto) => _repo.Crear(dto);
-        public Task<RolDto> Actualizar(RolUpdateDto dto) => _repo.Actualizar(dto);
+        public Task<List<RolMaestroDto>> ObtenerTodos() => _repo.ObtenerTodos();
+        public Task<RolMaestroDto?> ObtenerPorId(int id) => _repo.ObtenerPorId(id);
+        public Task<RolMaestroDto> Crear(RolMaestroDto dto) => _repo.Crear(dto);
+        public Task<RolMaestroDto> Actualizar(RolMaestroDto dto) => _repo.Actualizar(dto);
         public Task<bool> CambiarEstado(int id, bool estado) => _repo.CambiarEstado(id, estado);
         public Task<bool> Eliminar(int id) => _repo.Eliminar(id);
         public Task<List<string>> ObtenerPermisos(int rolId) => _repo.ObtenerPermisosPorRol(rolId);

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace Syspharma.Domain.DTOs
@@ -23,6 +23,8 @@ namespace Syspharma.Domain.DTOs
         public decimal Total { get; set; }
         public string? Notas { get; set; }
         public DateTime? FechaVenta { get; set; }
+        public string Origen { get; set; } = "CAJA";
+        public int? PedidoId { get; set; }
         public List<VentaDetalleDto> Detalles { get; set; } = new();
         public List<VentaDetalleServicioDto> Servicios { get; set; } = new();
     }
@@ -47,6 +49,7 @@ namespace Syspharma.Domain.DTOs
         public decimal PrecioUnitario { get; set; }
         public decimal Descuento { get; set; }
         public decimal Subtotal { get; set; }
+        public int? CitaId { get; set; }
     }
 
     public class VentaCreateDto
@@ -62,6 +65,8 @@ namespace Syspharma.Domain.DTOs
         public decimal Iva { get; set; }
         public decimal Total { get; set; }
         public string? Notas { get; set; }
+        public string Origen { get; set; } = "CAJA";
+        public int? PedidoId { get; set; }
         public List<VentaDetalleCreateDto> Detalles { get; set; } = new();
         public List<VentaDetalleServicioCreateDto> Servicios { get; set; } = new();
     }
@@ -82,6 +87,7 @@ namespace Syspharma.Domain.DTOs
         public decimal PrecioUnitario { get; set; }
         public decimal Descuento { get; set; }
         public decimal Subtotal { get; set; }
+        public int? CitaId { get; set; }
     }
 
     public class VentaUpdateDto

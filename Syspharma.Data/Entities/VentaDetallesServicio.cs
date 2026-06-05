@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace Syspharma.Data.Entities;
@@ -12,7 +12,9 @@ public partial class VentaDetalleServicio
     public decimal PrecioUnitario { get; set; }
     public decimal Descuento { get; set; }
     public decimal Subtotal { get; set; }
+    public int? CitaId { get; set; }
 
     public virtual Venta Venta { get; set; } = null!;
     public virtual Servicio Servicio { get; set; } = null!;
+    public virtual Cita? Cita { get; set; }
 }

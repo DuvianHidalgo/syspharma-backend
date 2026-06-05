@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace Syspharma.Data.Entities;
@@ -35,6 +35,9 @@ public partial class Cita
 
     public int? UsuarioId { get; set; }
 
+    public int? PedidoId { get; set; }
+    public int? VentaId { get; set; }
+
     public virtual EstadosCitum Estado { get; set; } = null!;
 
     public virtual Medico Medico { get; set; } = null!;
@@ -42,4 +45,6 @@ public partial class Cita
     public virtual Servicio? Servicio { get; set; }
 
     public virtual Usuario? Usuario { get; set; }
+    public virtual Pedido? Pedido { get; set; }
+    public virtual Venta? Venta { get; set; }
 }

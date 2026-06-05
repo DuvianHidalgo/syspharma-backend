@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace Syspharma.Domain.DTOs
@@ -60,6 +60,7 @@ namespace Syspharma.Domain.DTOs
         public string? Origen { get; set; } = "web";
         public DateTime? FechaEntrega { get; set; }
         public List<PedidoDetalleCreateDto> Detalles { get; set; } = new();
+        public List<int>? CitaIds { get; set; } = new();
     }
 
     public class PedidoUpdateDto

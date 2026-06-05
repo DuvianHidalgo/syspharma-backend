@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
@@ -99,10 +99,14 @@ public partial class SyspharmaContext : IdentityDbContext<Usuario, IdentityRole<
             entity.Property(e => e.ServicioId).HasColumnName("servicioId");
             entity.Property(e => e.ServicioNombre).HasMaxLength(100).HasColumnName("servicioNombre");
             entity.Property(e => e.UsuarioId).HasColumnName("usuarioId");
+            entity.Property(e => e.PedidoId).HasColumnName("pedidoId");
+            entity.Property(e => e.VentaId).HasColumnName("ventaId");
             entity.HasOne(d => d.Estado).WithMany(p => p.Cita).HasForeignKey(d => d.EstadoId).OnDelete(DeleteBehavior.ClientSetNull).HasConstraintName("FK_Citas_Estado");
             entity.HasOne(d => d.Medico).WithMany(p => p.Cita).HasForeignKey(d => d.MedicoId).OnDelete(DeleteBehavior.ClientSetNull).HasConstraintName("FK_Citas_Medicos");
             entity.HasOne(d => d.Servicio).WithMany(p => p.Cita).HasForeignKey(d => d.ServicioId).OnDelete(DeleteBehavior.SetNull).HasConstraintName("FK_Citas_Servicios");
             entity.HasOne(d => d.Usuario).WithMany(p => p.Cita).HasForeignKey(d => d.UsuarioId).OnDelete(DeleteBehavior.SetNull).HasConstraintName("FK_Citas_Usuarios");
+            entity.HasOne(d => d.Pedido).WithMany().HasForeignKey(d => d.PedidoId).OnDelete(DeleteBehavior.SetNull).HasConstraintName("FK_Citas_Pedidos");
+            entity.HasOne(d => d.Venta).WithMany().HasForeignKey(d => d.VentaId).OnDelete(DeleteBehavior.SetNull).HasConstraintName("FK_Citas_Ventas");
         });
 
         modelBuilder.Entity<Compra>(entity =>
@@ -508,10 +512,13 @@ public partial class SyspharmaContext : IdentityDbContext<Usuario, IdentityRole<
             entity.Property(e => e.Total).HasColumnType("decimal(12, 2)").HasColumnName("total");
             entity.Property(e => e.TurnoId).HasColumnName("turnoId");
             entity.Property(e => e.UsuarioId).HasColumnName("usuarioId");
+            entity.Property(e => e.Origen).HasMaxLength(20).HasDefaultValue("CAJA").HasColumnName("origen");
+            entity.Property(e => e.PedidoId).HasColumnName("pedidoId");
             entity.HasOne(d => d.Estado).WithMany(p => p.Venta).HasForeignKey(d => d.EstadoId).OnDelete(DeleteBehavior.ClientSetNull).HasConstraintName("FK_Ventas_Estado");
             entity.HasOne(d => d.MetodoPago).WithMany(p => p.Venta).HasForeignKey(d => d.MetodoPagoId).OnDelete(DeleteBehavior.ClientSetNull).HasConstraintName("FK_Ventas_MetodoPago");
             entity.HasOne(d => d.Turno).WithMany(p => p.Venta).HasForeignKey(d => d.TurnoId).OnDelete(DeleteBehavior.ClientSetNull).HasConstraintName("FK_Ventas_Turnos");
             entity.HasOne(d => d.Usuario).WithMany(p => p.Venta).HasForeignKey(d => d.UsuarioId).OnDelete(DeleteBehavior.ClientSetNull).HasConstraintName("FK_Ventas_Usuarios");
+            entity.HasOne(d => d.Pedido).WithMany().HasForeignKey(d => d.PedidoId).OnDelete(DeleteBehavior.SetNull).HasConstraintName("FK_Ventas_Pedidos");
         });
 
         modelBuilder.Entity<VentaDetalle>(entity =>
@@ -544,6 +551,7 @@ public partial class SyspharmaContext : IdentityDbContext<Usuario, IdentityRole<
             entity.Property(e => e.PrecioUnitario).HasColumnType("decimal(12, 2)").HasColumnName("precioUnitario");
             entity.Property(e => e.Descuento).HasColumnType("decimal(12, 2)").HasColumnName("descuento");
             entity.Property(e => e.Subtotal).HasColumnType("decimal(12, 2)").HasColumnName("subtotal");
+            entity.Property(e => e.CitaId).HasColumnName("citaId");
 
             entity.HasOne(d => d.Venta)
                 .WithMany(p => p.VentaDetallesServicios)
@@ -556,6 +564,12 @@ public partial class SyspharmaContext : IdentityDbContext<Usuario, IdentityRole<
                 .HasForeignKey(d => d.ServicioId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_VentaDetalleServicios_Servicios");
+
+            entity.HasOne(d => d.Cita)
+                .WithMany()
+                .HasForeignKey(d => d.CitaId)
+                .OnDelete(DeleteBehavior.SetNull)
+                .HasConstraintName("FK_VentaDetalleServicios_Citas");
         });
 
         // --- NUEVA CONFIGURACIÓN PARA PRODUCTO MEDICAMENTO ---

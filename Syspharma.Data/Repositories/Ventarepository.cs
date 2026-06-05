@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Syspharma.Data.Context;
 using Syspharma.Data.Entities;
 using Syspharma.Domain.DTOs;
@@ -44,6 +44,8 @@ namespace Syspharma.Data.Repositories
             Iva = v.Iva,
             Total = v.Total, // Muestra el total real guardado en la DB
             FechaVenta = v.FechaVenta,
+            Origen = v.Origen,
+            PedidoId = v.PedidoId,
 
             // Enviamos los productos mapeados
             Detalles = v.VentaDetalles?.Select(d => new VentaDetalleDto
@@ -89,6 +91,8 @@ namespace Syspharma.Data.Repositories
                 Total = v.Total,
                 Subtotal = v.Subtotal,
                 FechaVenta = v.FechaVenta,
+                Origen = v.Origen,
+                PedidoId = v.PedidoId,
                 // PASAMOS LOS PRODUCTOS (forzando listas no nulas)
                 Detalles = v.VentaDetalles?.Select(d => new VentaDetalleDto
                 {
@@ -145,7 +149,9 @@ namespace Syspharma.Data.Repositories
                     EstadoId = 1,
                     Subtotal = subtotalFinal,
                     Total = totalFinal, // YA TIENE EL COSTO DE LOS SERVICIOS
-                    FechaVenta = DateTime.Now
+                    FechaVenta = DateTime.Now,
+                    Origen = string.IsNullOrWhiteSpace(dto.Origen) ? "CAJA" : dto.Origen,
+                    PedidoId = dto.PedidoId
                 };
 
                 _context.Ventas.Add(venta);
@@ -180,8 +186,24 @@ namespace Syspharma.Data.Repositories
                             ServicioId = s.ServicioId,
                             Cantidad = s.Cantidad,
                             PrecioUnitario = s.PrecioUnitario,
-                            Subtotal = s.Cantidad * s.PrecioUnitario
+                            Subtotal = s.Cantidad * s.PrecioUnitario,
+                            CitaId = s.CitaId
                         });
+
+                        // Mark Cita as Pagada
+                        if (s.CitaId.HasValue && s.CitaId.Value > 0)
+                        {
+                            var cita = await _context.Citas.FindAsync(s.CitaId.Value);
+                            if (cita != null)
+                            {
+                                cita.VentaId = venta.Id;
+                                var estadoPagada = await _context.EstadosCita.FirstOrDefaultAsync(e => e.Nombre == "Pagada");
+                                if (estadoPagada != null)
+                                {
+                                    cita.EstadoId = estadoPagada.Id;
+                                }
+                            }
+                        }
                     }
                 }
 

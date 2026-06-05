@@ -6,6 +6,9 @@
 # dotenv files
 .env
 
+# pa que no se esté cambiando el server en defaultConnection (appsettings.json)
+appsettings.json
+
 # User-specific files
 *.rsuser
 *.suo
@@ -482,3 +485,4 @@ $RECYCLE.BIN/
 
 # Vim temporary swap files
 *.swp
+

@@ -1,4 +1,4 @@
-﻿using AutoMapper;
+using AutoMapper;
 using Microsoft.EntityFrameworkCore;
 using Syspharma.Data.Context;
 using Syspharma.Data.Entities;
@@ -36,6 +36,8 @@ namespace Syspharma.Business.Services
                     .Include(v => v.Estado)
                     .Include(v => v.MetodoPago)
                     .Include(v => v.Usuario)
+                    .Include(v => v.VentaDetalles).ThenInclude(d => d.Producto)
+                    .Include(v => v.VentaDetallesServicios).ThenInclude(s => s.Servicio)
                     .OrderByDescending(v => v.FechaVenta)
                     .ToListAsync();
 
@@ -103,7 +105,9 @@ namespace Syspharma.Business.Services
                     PorcentajeIva = porcentajeIva,
                     Total = totalFinal,
                     Notas = dto.Notas,
-                    FechaVenta = DateTime.Now
+                    FechaVenta = DateTime.Now,
+                    Origen = string.IsNullOrWhiteSpace(dto.Origen) ? "CAJA" : dto.Origen,
+                    PedidoId = dto.PedidoId
                 };
 
                 _context.Ventas.Add(venta);
@@ -148,9 +152,25 @@ namespace Syspharma.Business.Services
                             Cantidad = s.Cantidad,
                             PrecioUnitario = s.PrecioUnitario,
                             Descuento = s.Descuento,
-                            Subtotal = (s.Cantidad * s.PrecioUnitario) - s.Descuento
+                            Subtotal = (s.Cantidad * s.PrecioUnitario) - s.Descuento,
+                            CitaId = s.CitaId
                         };
                         _context.VentaDetalleServicios.Add(nuevoServicioDetalle);
+
+                        // Mark Cita as Pagada
+                        if (s.CitaId.HasValue && s.CitaId.Value > 0)
+                        {
+                            var cita = await _context.Citas.FindAsync(s.CitaId.Value);
+                            if (cita != null)
+                            {
+                                cita.VentaId = venta.Id;
+                                var estadoPagada = await _context.EstadosCita.FirstOrDefaultAsync(e => e.Nombre == "Pagada");
+                                if (estadoPagada != null)
+                                {
+                                    cita.EstadoId = estadoPagada.Id;
+                                }
+                            }
+                        }
                     }
                 }
 

@@ -191,22 +191,8 @@ public partial class SyspharmaContext : IdentityDbContext<Usuario, IdentityRole<
             entity.Property(e => e.Nombre).HasMaxLength(30).HasColumnName("nombre");
         });
 
-        modelBuilder.Entity<Gasto>(entity =>
-        {
-            entity.HasKey(e => e.Id).HasName("PK__gastos__3213E83F9BA914EE");
-            entity.ToTable("gastos");
-            entity.Property(e => e.Id).HasColumnName("id");
-            entity.Property(e => e.Categoria).HasMaxLength(20).HasDefaultValue("operacional").HasColumnName("categoria");
-            entity.Property(e => e.Comprobante).HasMaxLength(100).HasColumnName("comprobante");
-            entity.Property(e => e.Concepto).HasMaxLength(200).HasColumnName("concepto");
-            entity.Property(e => e.Descripcion).HasColumnName("descripcion");
-            entity.Property(e => e.FechaGasto).HasDefaultValueSql("(getdate())").HasColumnType("datetime").HasColumnName("fechaGasto");
-            entity.Property(e => e.Monto).HasColumnType("decimal(12, 2)").HasColumnName("monto");
-            entity.Property(e => e.TurnoId).HasColumnName("turnoId");
-            entity.Property(e => e.UsuarioId).HasColumnName("usuarioId");
-            entity.HasOne(d => d.Turno).WithMany(p => p.Gastos).HasForeignKey(d => d.TurnoId).OnDelete(DeleteBehavior.ClientSetNull).HasConstraintName("FK_Gastos_Turnos");
-            entity.HasOne(d => d.Usuario).WithMany(p => p.Gastos).HasForeignKey(d => d.UsuarioId).OnDelete(DeleteBehavior.ClientSetNull).HasConstraintName("FK_Gastos_Usuarios");
-        });
+        // ❌ CONFIGURACIÓN INCOMPLETA ELIMINADA — estaba duplicada antes
+        // La configuración completa de Gasto está más abajo
 
         modelBuilder.Entity<Medico>(entity =>
         {
@@ -301,17 +287,53 @@ public partial class SyspharmaContext : IdentityDbContext<Usuario, IdentityRole<
             entity.HasOne(d => d.Producto).WithMany(p => p.PedidoDetalles).HasForeignKey(d => d.ProductoId).OnDelete(DeleteBehavior.SetNull).HasConstraintName("FK_PedidoDetalles_Productos");
         });
 
-        modelBuilder.Entity<Permiso>(entity =>
+        // ✅ CONFIGURACIÓN COMPLETA DE GASTO — ÚNICA VERSIÓN
+        modelBuilder.Entity<Gasto>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__permisos__3213E83F737E37FD");
-            entity.ToTable("permisos");
-            entity.HasIndex(e => e.Codigo, "UQ__permisos__40F9A20615D29301").IsUnique();
+            entity.HasKey(e => e.Id).HasName("PK__gastos__3213E83F9BA914EE");
+            entity.ToTable("gastos");
+
             entity.Property(e => e.Id).HasColumnName("id");
-            entity.Property(e => e.Categoria).HasMaxLength(50).HasColumnName("categoria");
-            entity.Property(e => e.Codigo).HasMaxLength(50).HasColumnName("codigo");
+            entity.Property(e => e.NumeroGasto).HasMaxLength(20).HasColumnName("numeroGasto");
+            entity.Property(e => e.TurnoId).HasColumnName("turnoId");
+            entity.Property(e => e.UsuarioId).HasColumnName("usuarioId");
+            entity.Property(e => e.Concepto).HasMaxLength(200).HasColumnName("concepto");
             entity.Property(e => e.Descripcion).HasColumnName("descripcion");
+            entity.Property(e => e.Monto).HasColumnType("decimal(12, 2)").HasColumnName("monto");
+            entity.Property(e => e.Categoria).HasMaxLength(20).HasDefaultValue("operacional").HasColumnName("categoria");
+            entity.Property(e => e.MetodoPagoId).HasColumnName("metodoPagoId");
+            entity.Property(e => e.EstadoId).HasColumnName("estadoId");
+            entity.Property(e => e.Subtotal).HasColumnType("decimal(12, 2)").HasColumnName("subtotal");
+            entity.Property(e => e.Iva).HasColumnType("decimal(12, 2)").HasColumnName("iva");
+            entity.Property(e => e.PorcentajeIva).HasColumnType("decimal(5, 2)").HasColumnName("porcentajeIva");
+            entity.Property(e => e.Notas).HasMaxLength(1000).HasColumnName("notas");
+            entity.Property(e => e.ProveedorNombre).HasMaxLength(400).HasColumnName("proveedorNombre");
+            entity.Property(e => e.ProveedorDocumento).HasMaxLength(40).HasColumnName("proveedorDocumento");
+            entity.Property(e => e.ProveedorTelefono).HasMaxLength(40).HasColumnName("proveedorTelefono");
+            entity.Property(e => e.Comprobante).HasMaxLength(100).HasColumnName("comprobante");
+            entity.Property(e => e.FechaGasto).HasDefaultValueSql("(getdate())").HasColumnType("datetime").HasColumnName("fechaGasto");
             entity.Property(e => e.FechaCreacion).HasDefaultValueSql("(getdate())").HasColumnType("datetime").HasColumnName("fechaCreacion");
-            entity.Property(e => e.Nombre).HasMaxLength(100).HasColumnName("nombre");
+
+            // Índices
+            entity.HasIndex(e => e.FechaGasto).HasDatabaseName("IX_Gastos_fechaGasto");
+            entity.HasIndex(e => e.UsuarioId).HasDatabaseName("IX_Gastos_usuarioId");
+            entity.HasIndex(e => e.EstadoId).HasDatabaseName("IX_Gastos_estadoId");
+            entity.HasIndex(e => e.Categoria).HasDatabaseName("IX_Gastos_categoria");
+
+            // Relaciones
+            entity.HasOne(d => d.Turno)
+                .WithMany(p => p.Gastos)
+                .HasForeignKey(d => d.TurnoId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_Gastos_Turnos");
+
+            entity.HasOne(d => d.Usuario)
+                .WithMany(p => p.Gastos)
+                .HasForeignKey(d => d.UsuarioId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_Gastos_Usuarios");
+
+            // NOTE: asociación a MetodosPago eliminada intencionalmente.
         });
 
         modelBuilder.Entity<Producto>(entity =>
@@ -475,20 +497,6 @@ public partial class SyspharmaContext : IdentityDbContext<Usuario, IdentityRole<
             entity.Property(e => e.MontoBase).HasColumnType("decimal(12, 2)").HasColumnName("montoBase");
             entity.Property(e => e.TotalGastos).HasColumnType("decimal(38, 2)").HasColumnName("totalGastos");
             entity.Property(e => e.TotalVentas).HasColumnType("decimal(38, 2)").HasColumnName("totalVentas");
-        });
-
-        modelBuilder.Entity<VVentaDetalle>(entity =>
-        {
-            entity.HasNoKey().ToView("v_venta_detalles");
-            entity.Property(e => e.Cantidad).HasColumnName("cantidad");
-            entity.Property(e => e.Descuento).HasColumnType("decimal(12, 2)").HasColumnName("descuento");
-            entity.Property(e => e.Id).HasColumnName("id");
-            entity.Property(e => e.PrecioUnitario).HasColumnType("decimal(12, 2)").HasColumnName("precioUnitario");
-            entity.Property(e => e.ProductoId).HasColumnName("productoId");
-            entity.Property(e => e.ProductoNombre).HasMaxLength(200).HasColumnName("productoNombre");
-            entity.Property(e => e.Subtotal).HasColumnType("decimal(12, 2)").HasColumnName("subtotal");
-            entity.Property(e => e.SubtotalCalculado).HasColumnType("decimal(24, 2)").HasColumnName("subtotal_calculado");
-            entity.Property(e => e.VentaId).HasColumnName("ventaId");
         });
 
         modelBuilder.Entity<Venta>(entity =>

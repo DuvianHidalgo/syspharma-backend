@@ -58,10 +58,6 @@ namespace Syspharma.Data.Repositories
                 Documento = dto.Documento,
                 Email = dto.Email,
                 Telefono = dto.Telefono,
-                //DiasLaborales = dto.DiasLaborales,
-                //HoraInicio = dto.HoraInicio != null ? TimeOnly.Parse(dto.HoraInicio) : null,
-                //HoraFin = dto.HoraFin != null ? TimeOnly.Parse(dto.HoraFin) : null,
-                //Intervalo = dto.Intervalo ?? 30,
                 Estado = true,
                 FechaCreacion = DateTime.Now
             };
@@ -79,10 +75,6 @@ namespace Syspharma.Data.Repositories
             m.Documento = dto.Documento;
             m.Email = dto.Email;
             m.Telefono = dto.Telefono;
-            //m.DiasLaborales = dto.DiasLaborales;
-            //m.HoraInicio = dto.HoraInicio != null ? TimeOnly.Parse(dto.HoraInicio) : null;
-            //m.HoraFin = dto.HoraFin != null ? TimeOnly.Parse(dto.HoraFin) : null;
-            //m.Intervalo = dto.Intervalo;
             await _context.SaveChangesAsync();
             return MapDto(m);
         }
@@ -100,6 +92,11 @@ namespace Syspharma.Data.Repositories
         {
             var m = await _context.Medicos.FindAsync(id);
             if (m == null) return false;
+
+            var tieneCitas = await _context.Citas.AnyAsync(c => c.MedicoId == id);
+            if (tieneCitas)
+                throw new Exception("No se puede eliminar el médico porque tiene citas registradas. Desactívalo en su lugar.");
+
             _context.Medicos.Remove(m);
             await _context.SaveChangesAsync();
             return true;

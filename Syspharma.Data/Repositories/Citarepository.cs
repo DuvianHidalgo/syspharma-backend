@@ -39,8 +39,10 @@ namespace Syspharma.Data.Repositories
             EstadoNombre = c.Estado?.Nombre ?? "Pendiente",
             UsuarioId = c.UsuarioId,
             UsuarioNombre = c.Usuario?.Nombre,
-            Fecha = c.Fecha.ToString("yyyy-MM-dd"),
-            Hora = c.Hora.ToString(@"HH\:mm"),
+            PedidoId = c.PedidoId,      // ← AGREGADO
+            VentaId = c.VentaId,        // ← AGREGADO
+            Fecha = c.Fecha == default ? DateTime.Now.ToString("yyyy-MM-dd") : c.Fecha.ToString("yyyy-MM-dd"),
+            Hora = c.Hora == default ? "00:00" : c.Hora.ToString(@"HH\:mm"),
             Notas = c.Notas,
             FechaCreacion = c.FechaCreacion
         };

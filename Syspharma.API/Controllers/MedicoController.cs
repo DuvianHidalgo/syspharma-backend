@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Syspharma.Business.Services;
 using Syspharma.Domain.DTOs;
+
 namespace Syspharma.API.Controllers
 {
     [ApiController]
@@ -47,8 +48,15 @@ namespace Syspharma.API.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> Eliminar(int id)
         {
-            try { await _service.Eliminar(id); return Ok(new { message = "Médico eliminado correctamente" }); }
-            catch (Exception ex) { return BadRequest(new { message = ex.Message }); }
+            try
+            {
+                await _service.Eliminar(id);
+                return Ok(new { message = "Médico eliminado correctamente" });
+            }
+            catch (Exception ex)
+            {
+                return Conflict(new { message = ex.Message });
+            }
         }
     }
 }

@@ -20,7 +20,7 @@ public partial class Venta
     public decimal Total { get; set; }
     public string? Notas { get; set; }
     public DateTime? FechaVenta { get; set; }
-    public string Origen { get; set; } = "CAJA";
+    public string? Origen { get; set; } = "CAJA";
     public int? PedidoId { get; set; }
 
     public virtual EstadosVentum Estado { get; set; } = null!;

@@ -16,4 +16,7 @@ public partial class MetodosPago
     public virtual ICollection<Pedido> Pedidos { get; set; } = new List<Pedido>();
 
     public virtual ICollection<Venta> Venta { get; set; } = new List<Venta>();
+
+    // AGREGAR ESTA LÍNEA:
+    public virtual ICollection<Gasto> Gastos { get; set; } = new List<Gasto>();
 }

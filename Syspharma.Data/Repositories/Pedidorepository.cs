@@ -140,6 +140,8 @@ namespace Syspharma.Data.Repositories
                         var producto = await _context.Productos.FindAsync(d.ProductoId);
                         if (producto != null)
                         {
+                            if (producto.Stock < d.Cantidad)
+                                throw new Exception($"Stock insuficiente para '{producto.Nombre}'. Disponible: {producto.Stock}, solicitado: {d.Cantidad}.");
                             producto.Stock -= d.Cantidad;
                             _context.Entry(producto).State = EntityState.Modified;
                         }

@@ -15,6 +15,7 @@ namespace Syspharma.Business.Services
         Task<bool> Eliminar(int id);
         Task<List<EstadoVentaDto>> ObtenerEstados();
         Task<bool> CambiarEstado(int id, int estadoId);
+        Task<bool> Anular(int id);
     }
 
     public class VentaService : IVentaService
@@ -86,8 +87,6 @@ namespace Syspharma.Business.Services
                 decimal subtotalFinal = subtotalProd + subtotalServ;
 
                 decimal porcentajeIva = dto.PorcentajeIva > 0 ? dto.PorcentajeIva : 0;
-                decimal ivaFinal = subtotalFinal * (porcentajeIva / 100);
-                decimal totalFinal = subtotalFinal + ivaFinal;
 
                 // 3. CREAR LA ENTIDAD VENTA
                 var venta = new Venta
@@ -101,14 +100,16 @@ namespace Syspharma.Business.Services
                     MetodoPagoId = dto.MetodoPagoId,
                     EstadoId = 1, // 1 = Completada
                     Subtotal = subtotalFinal,
-                    Iva = ivaFinal,
                     PorcentajeIva = porcentajeIva,
-                    Total = totalFinal,
                     Notas = dto.Notas,
                     FechaVenta = DateTime.Now,
                     Origen = string.IsNullOrWhiteSpace(dto.Origen) ? "CAJA" : dto.Origen,
                     PedidoId = dto.PedidoId
                 };
+
+                // ✔ Usar la propiedad enviada por el cliente para calcular IVA
+                venta.Iva = venta.Subtotal * (venta.PorcentajeIva / 100.0m);
+                venta.Total = venta.Subtotal + venta.Iva;
 
                 _context.Ventas.Add(venta);
                 // Guardamos cambios parciales para generar el ID de la venta
@@ -130,7 +131,7 @@ namespace Syspharma.Business.Services
                         };
                         _context.VentaDetalles.Add(nuevoDetalle);
 
-                // Descuento de stock con validación
+                        // Descuento de stock con validación
                         var producto = await _context.Productos.FindAsync(d.ProductoId);
                         if (producto != null)
                         {
@@ -177,7 +178,7 @@ namespace Syspharma.Business.Services
                 }
 
                 // 6. ACTUALIZAR TOTALES DEL TURNO (CAJA)
-                turno.TotalVentas += totalFinal;
+                turno.TotalVentas += venta.Total;
                 turno.ResumenVentas += 1;
 
                 await _context.SaveChangesAsync();
@@ -227,6 +228,57 @@ namespace Syspharma.Business.Services
             v.EstadoId = estadoId;
             await _context.SaveChangesAsync();
             return true;
+        }
+
+        public async Task<bool> Anular(int id)
+        {
+            var venta = await _context.Ventas
+                .Include(v => v.VentaDetalles)
+                .Include(v => v.Turno)
+                .FirstOrDefaultAsync(v => v.Id == id)
+                ?? throw new Exception("La venta no existe.");
+
+            if (venta.EstadoId == 3)
+                throw new Exception("La venta ya está anulada.");
+
+            if (venta.EstadoId == 2)
+                throw new Exception("No se puede anular una venta con devolución aprobada.");
+
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            try
+            {
+                // 1. Cambiar estado a anulada (3)
+                venta.EstadoId = 3;
+
+                // 2. Devolver stock de cada producto
+                foreach (var detalle in venta.VentaDetalles)
+                {
+                    var producto = await _context.Productos.FindAsync(detalle.ProductoId);
+                    if (producto != null)
+                    {
+                        producto.Stock += detalle.Cantidad;
+                        producto.UltimaActualizacion = DateTime.Now;
+                    }
+                }
+
+                // 3. Restar del turno
+                if (venta.Turno != null)
+                {
+                    venta.Turno.TotalVentas -= venta.Total;
+                    if (venta.Turno.ResumenVentas > 0)
+                        venta.Turno.ResumenVentas -= 1;
+                }
+
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+                return true;
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync();
+                string innerMessage = ex.InnerException != null ? ex.InnerException.Message : "";
+                throw new Exception($"Error al anular la venta: {ex.Message}. {innerMessage}");
+            }
         }
     }
 }

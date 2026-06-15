@@ -68,6 +68,17 @@ namespace Syspharma.API.Controllers
             catch (Exception ex) { return BadRequest(new { message = ex.Message }); }
         }
 
+        [HttpPatch("{id}/anular")]
+        public async Task<IActionResult> Anular(int id)
+        {
+            try
+            {
+                await _service.Anular(id);
+                return Ok(new { message = "Venta anulada correctamente" });
+            }
+            catch (Exception ex) { return BadRequest(new { message = ex.Message }); }
+        }
+
         [HttpDelete("{id}")]
         public async Task<IActionResult> Eliminar(int id)
         {

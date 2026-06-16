@@ -11,7 +11,11 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Syspharma.Data", "Syspharma
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Syspharma.Domain", "Syspharma.Domain\Syspharma.Domain.csproj", "{EFD16E9F-C2F2-4692-B9F4-204390836980}"
 EndProject
+<<<<<<< HEAD
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Syspharma.test", "Syspharma.test\Syspharma.test.csproj", "{D3E4A431-BDCB-40D7-9FEF-9BF0AE0138DA}"
+=======
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Syspharma.Tests", "Syspharma.Tests\Syspharma.Tests.csproj", "{DF9A7E30-16DB-4646-B21F-433A6AEF8B7D}"
+>>>>>>> origin/develop
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -71,6 +75,7 @@ Global
 		{EFD16E9F-C2F2-4692-B9F4-204390836980}.Release|x64.Build.0 = Release|Any CPU
 		{EFD16E9F-C2F2-4692-B9F4-204390836980}.Release|x86.ActiveCfg = Release|Any CPU
 		{EFD16E9F-C2F2-4692-B9F4-204390836980}.Release|x86.Build.0 = Release|Any CPU
+<<<<<<< HEAD
 		{D3E4A431-BDCB-40D7-9FEF-9BF0AE0138DA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{D3E4A431-BDCB-40D7-9FEF-9BF0AE0138DA}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D3E4A431-BDCB-40D7-9FEF-9BF0AE0138DA}.Debug|x64.ActiveCfg = Debug|Any CPU
@@ -83,11 +88,29 @@ Global
 		{D3E4A431-BDCB-40D7-9FEF-9BF0AE0138DA}.Release|x64.Build.0 = Release|Any CPU
 		{D3E4A431-BDCB-40D7-9FEF-9BF0AE0138DA}.Release|x86.ActiveCfg = Release|Any CPU
 		{D3E4A431-BDCB-40D7-9FEF-9BF0AE0138DA}.Release|x86.Build.0 = Release|Any CPU
+=======
+		{DF9A7E30-16DB-4646-B21F-433A6AEF8B7D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DF9A7E30-16DB-4646-B21F-433A6AEF8B7D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DF9A7E30-16DB-4646-B21F-433A6AEF8B7D}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{DF9A7E30-16DB-4646-B21F-433A6AEF8B7D}.Debug|x64.Build.0 = Debug|Any CPU
+		{DF9A7E30-16DB-4646-B21F-433A6AEF8B7D}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{DF9A7E30-16DB-4646-B21F-433A6AEF8B7D}.Debug|x86.Build.0 = Debug|Any CPU
+		{DF9A7E30-16DB-4646-B21F-433A6AEF8B7D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DF9A7E30-16DB-4646-B21F-433A6AEF8B7D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DF9A7E30-16DB-4646-B21F-433A6AEF8B7D}.Release|x64.ActiveCfg = Release|Any CPU
+		{DF9A7E30-16DB-4646-B21F-433A6AEF8B7D}.Release|x64.Build.0 = Release|Any CPU
+		{DF9A7E30-16DB-4646-B21F-433A6AEF8B7D}.Release|x86.ActiveCfg = Release|Any CPU
+		{DF9A7E30-16DB-4646-B21F-433A6AEF8B7D}.Release|x86.Build.0 = Release|Any CPU
+>>>>>>> origin/develop
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
+<<<<<<< HEAD
 		SolutionGuid = {F7AB2086-8724-4D22-9040-E5BE3FB44B5B}
+=======
+		SolutionGuid = {A0B41402-81AD-4DAD-9BB7-40B26B233045}
+>>>>>>> origin/develop
 	EndGlobalSection
 EndGlobal

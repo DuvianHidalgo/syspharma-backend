@@ -117,6 +117,7 @@ builder.Services.AddScoped<IServicioRepository, ServicioRepository>();
 builder.Services.AddScoped<ICitaRepository, CitaRepository>();
 builder.Services.AddScoped<ITurnoRepository, TurnoRepository>();
 builder.Services.AddScoped<IGastoRepository, GastoRepository>();
+builder.Services.AddScoped<IDevolucionRepository, DevolucionRepository>();
 
 // 10. Servicios
 builder.Services.AddScoped<IUsuarioService, UsuarioService>();
@@ -133,6 +134,7 @@ builder.Services.AddScoped<IServicioService, ServicioService>();
 builder.Services.AddScoped<ICitaService, CitaService>();
 builder.Services.AddScoped<ITurnoService, TurnoService>();
 builder.Services.AddScoped<IGastoService, GastoService>();
+builder.Services.AddScoped<IDevolucionService, DevolucionService>();
 
 // 11. Otros
 builder.Services.AddMemoryCache();
@@ -157,5 +159,11 @@ if (app.Environment.IsDevelopment())
 }
 
 app.MapControllers();
+
+// Debug temporal: comprobar que el servicio quedó registrado (elimina este bloque después de probar)
+var helperProvider = builder.Services.BuildServiceProvider();
+var svcCheck = helperProvider.GetService<Syspharma.Business.Services.IDevolucionService>();
+if (svcCheck == null) Console.WriteLine("DEBUG: IDevolucionService NO está registrado.");
+else Console.WriteLine("DEBUG: IDevolucionService registrado correctamente.");
 
 app.Run();

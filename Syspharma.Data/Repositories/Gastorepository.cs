@@ -2,10 +2,6 @@
 using Syspharma.Data.Context;
 using Syspharma.Data.Entities;
 using Syspharma.Domain.DTOs;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace Syspharma.Data.Repositories
 {
@@ -34,14 +30,13 @@ namespace Syspharma.Data.Repositories
 
         public GastoRepository(SyspharmaContext context) => _context = context;
 
-        // ✅ Recalcula y actualiza TotalGastos del turno
         private async Task RecalcularTotalGastosTurno(int turnoId)
         {
             var turno = await _context.Turnos.FindAsync(turnoId);
             if (turno == null) return;
 
             turno.TotalGastos = await _context.Gastos
-                .Where(g => g.TurnoId == turnoId && (g.EstadoId == 1 || g.EstadoId == null))
+                .Where(g => g.TurnoId == turnoId)
                 .SumAsync(g => g.Monto);
 
             await _context.SaveChangesAsync();
@@ -53,22 +48,12 @@ namespace Syspharma.Data.Repositories
             TurnoId = g.TurnoId,
             UsuarioId = g.UsuarioId,
             UsuarioNombre = g.Usuario?.Nombre ?? "",
-            NumeroGasto = g.NumeroGasto,
             Concepto = g.Concepto,
             Descripcion = g.Descripcion,
             Monto = g.Monto,
             Categoria = g.Categoria,
-            MetodoPagoId = g.MetodoPagoId,
-            MetodoPago = null,
-            EstadoId = g.EstadoId,
-            Subtotal = g.Subtotal,
-            Iva = g.Iva,
-            PorcentajeIva = g.PorcentajeIva,
-            Notas = g.Notas,
-            Proveedor = g.ProveedorNombre,
             Comprobante = g.Comprobante,
             FechaGasto = g.FechaGasto,
-            FechaCreacion = g.FechaCreacion
         };
 
         public async Task<List<GastoDto>> ObtenerTodos() =>
@@ -97,44 +82,22 @@ namespace Syspharma.Data.Repositories
         {
             var ahora = AhoraColombia();
 
-            var fechaHoy = ahora.ToString("yyyyMMdd");
-            var prefix = $"GAS-{fechaHoy}-";
-            var ultimoNumero = await _context.Gastos
-                .Where(g => g.NumeroGasto != null && g.NumeroGasto.StartsWith(prefix))
-                .OrderByDescending(g => g.NumeroGasto)
-                .Select(g => g.NumeroGasto)
-                .FirstOrDefaultAsync();
-
-            int nextNum = 1;
-            if (ultimoNumero != null)
-            {
-                var numStr = ultimoNumero.Substring(prefix.Length);
-                if (int.TryParse(numStr, out int num))
-                    nextNum = num + 1;
-            }
-            var numeroGasto = $"{prefix}{nextNum:D4}";
-
             var gasto = new Gasto
             {
                 TurnoId = dto.TurnoId,
                 UsuarioId = dto.UsuarioId,
-                NumeroGasto = numeroGasto,
                 Concepto = dto.Concepto,
                 Descripcion = dto.Descripcion,
                 Monto = dto.Monto,
                 Categoria = dto.Categoria,
-                MetodoPagoId = dto.MetodoPagoId,
-                EstadoId = 1,
-                FechaGasto = ahora,  // ✅ siempre hora Colombia, ignorar dto.FechaGasto
-                FechaCreacion = ahora
+                Comprobante = dto.Comprobante,
+                FechaGasto = ahora
             };
 
             _context.Gastos.Add(gasto);
             await _context.SaveChangesAsync();
 
-            // ✅ Actualizar TotalGastos del turno
             await RecalcularTotalGastosTurno(dto.TurnoId);
-
             await _context.Entry(gasto).Reference(g => g.Usuario).LoadAsync();
 
             return MapDto(gasto);
@@ -142,21 +105,17 @@ namespace Syspharma.Data.Repositories
 
         public async Task<GastoDto> Actualizar(GastoUpdateDto dto)
         {
-            var gasto = await _context.Gastos.FindAsync(dto.Id);
-            if (gasto == null) throw new Exception("Gasto no encontrado");
+            var gasto = await _context.Gastos.FindAsync(dto.Id)
+                ?? throw new Exception("Gasto no encontrado");
 
             gasto.Concepto = dto.Concepto;
             gasto.Descripcion = dto.Descripcion;
             gasto.Monto = dto.Monto;
             gasto.Categoria = dto.Categoria;
-            gasto.MetodoPagoId = dto.MetodoPagoId;
-            gasto.Notas = dto.Notas;
             gasto.Comprobante = dto.Comprobante;
             gasto.FechaGasto = dto.FechaGasto ?? gasto.FechaGasto;
 
             await _context.SaveChangesAsync();
-
-            // ✅ Actualizar TotalGastos del turno
             await RecalcularTotalGastosTurno(gasto.TurnoId);
 
             return MapDto(gasto);
@@ -171,9 +130,7 @@ namespace Syspharma.Data.Repositories
             _context.Gastos.Remove(gasto);
             await _context.SaveChangesAsync();
 
-            // ✅ Actualizar TotalGastos del turno
             await RecalcularTotalGastosTurno(turnoId);
-
             return true;
         }
 
@@ -184,8 +141,7 @@ namespace Syspharma.Data.Repositories
 
             var query = _context.Gastos
                 .Include(g => g.Usuario)
-                .Where(g => g.FechaGasto >= hoy && g.FechaGasto < manana)
-                .Where(g => g.EstadoId == 1 || g.EstadoId == null);
+                .Where(g => g.FechaGasto >= hoy && g.FechaGasto < manana);
 
             if (usuarioId.HasValue)
                 query = query.Where(g => g.UsuarioId == usuarioId.Value);
@@ -195,17 +151,17 @@ namespace Syspharma.Data.Repositories
                 .Select(g => new GastoDto
                 {
                     Id = g.Id,
-                    Descripcion = g.Concepto,
+                    Concepto = g.Concepto,
+                    Descripcion = g.Descripcion,
                     Monto = g.Monto,
                     Categoria = g.Categoria,
-                    Hora = g.FechaGasto.HasValue ? g.FechaGasto.Value.ToString("hh:mm tt") : null,
-                    Fecha = g.FechaGasto,
-                    MetodoPagoId = g.MetodoPagoId,
-                    MetodoPago = null,
-                    Observaciones = g.Notas,
+                    Comprobante = g.Comprobante,
+                    FechaGasto = g.FechaGasto,
+                    Hora = g.FechaGasto.HasValue
+                        ? g.FechaGasto.Value.ToString("hh:mm tt")
+                        : null,
                     UsuarioId = g.UsuarioId,
                     UsuarioNombre = g.Usuario != null ? g.Usuario.Nombre : "",
-                    NumeroGasto = g.NumeroGasto
                 })
                 .ToListAsync();
         }
@@ -217,7 +173,6 @@ namespace Syspharma.Data.Repositories
 
             var gastosHoy = await _context.Gastos
                 .Where(g => g.FechaGasto >= hoy && g.FechaGasto < manana)
-                .Where(g => g.EstadoId == 1 || g.EstadoId == null)
                 .ToListAsync();
 
             return new GastoKpiDto
@@ -232,19 +187,15 @@ namespace Syspharma.Data.Repositories
 
         public async Task<bool> Anular(int id, string notas)
         {
+            // Como no existe EstadoId en la tabla, anular = eliminar físicamente
             var gasto = await _context.Gastos.FindAsync(id);
             if (gasto == null) return false;
 
             var turnoId = gasto.TurnoId;
-            gasto.EstadoId = 2;
-            if (!string.IsNullOrEmpty(notas))
-                gasto.Notas = notas;
-
+            _context.Gastos.Remove(gasto);
             await _context.SaveChangesAsync();
 
-            // ✅ Actualizar TotalGastos del turno
             await RecalcularTotalGastosTurno(turnoId);
-
             return true;
         }
     }

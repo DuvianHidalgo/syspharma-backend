@@ -15,6 +15,13 @@ namespace Syspharma.Business.Services
         Task<bool> Eliminar(int id);
         Task<List<EstadoVentaDto>> ObtenerEstados();
         Task<bool> CambiarEstado(int id, int estadoId);
+
+        // ── NUEVO ──────────────────────────────────────────────────────────────
+        /// <summary>
+        /// Convierte un Pedido en estado "Entregado" en una Venta automáticamente.
+        /// Requiere que haya un turno activo abierto.
+        /// </summary>
+        Task<VentaDto> CrearDesdePedido(int pedidoId);
     }
 
     public class VentaService : IVentaService
@@ -27,6 +34,132 @@ namespace Syspharma.Business.Services
             _context = context;
             _mapper = mapper;
         }
+
+        // ── NUEVO MÉTODO ────────────────────────────────────────────────────────
+        public async Task<VentaDto> CrearDesdePedido(int pedidoId)
+        {
+            // 1. Cargar el pedido con sus detalles
+            var pedido = await _context.Pedidos
+                .Include(p => p.PedidoDetalles)
+                    .ThenInclude(d => d.Producto)
+                .Include(p => p.MetodoPago)
+                .Include(p => p.Usuario)
+                .FirstOrDefaultAsync(p => p.Id == pedidoId)
+                ?? throw new Exception($"Pedido con ID {pedidoId} no encontrado.");
+
+            // 2. Buscar el turno activo
+            // El turno activo es el que tiene estado = "activo" más reciente.
+            var turnoActivo = await _context.Turnos
+                .Where(t => t.Estado == "activo")
+                .OrderByDescending(t => t.FechaApertura)
+                .FirstOrDefaultAsync()
+                ?? throw new Exception(
+                    "No hay un turno (caja) activo. Abrí un turno antes de marcar el pedido como Entregado.");
+
+            // 3. Buscar estado "Completada" en ventas
+            var estadoCompletada = await _context.EstadosVenta
+                .FirstOrDefaultAsync(e => e.Nombre == "Completada")
+                ?? throw new Exception("No se encontró el estado 'Completada' en la tabla estados_venta.");
+
+            // 4. Resolver MetodoPagoId
+            // Si el pedido tiene método de pago asignado lo usamos;
+            // si no, buscamos uno genérico ("Pendiente" o el primero disponible).
+            int metodoPagoId;
+            if (pedido.MetodoPagoId.HasValue)
+            {
+                metodoPagoId = pedido.MetodoPagoId.Value;
+            }
+            else
+            {
+                var metodoPorDefecto = await _context.MetodosPagos
+                    .Where(m => m.Estado == true)
+                    .OrderBy(m => m.Id)
+                    .FirstOrDefaultAsync()
+                    ?? throw new Exception("No hay métodos de pago disponibles en el sistema.");
+
+                metodoPagoId = metodoPorDefecto.Id;
+            }
+
+            // 5. Validar que haya detalles con ProductoId (no nulo)
+            var detallesValidos = pedido.PedidoDetalles
+                .Where(d => d.ProductoId.HasValue)
+                .ToList();
+
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            try
+            {
+                // 6. Crear la Venta
+                var venta = new Venta
+                {
+                    NumeroVenta = $"VNT-{DateTime.Now:yyyyMMddHHmmss}-P{pedido.Id}",
+                    TurnoId = turnoActivo.Id,
+                    // UsuarioId: usar el del pedido si existe, si no el que abrió el turno
+                    UsuarioId = pedido.UsuarioId ?? turnoActivo.UsuarioId,
+                    ClienteNombre = string.IsNullOrWhiteSpace(pedido.ClienteNombre)
+                        ? "Consumidor Final"
+                        : pedido.ClienteNombre,
+                    ClienteDocumento = pedido.ClienteDocumento,
+                    ClienteTelefono = pedido.ClienteTelefono,
+                    MetodoPagoId = metodoPagoId,
+                    EstadoId = estadoCompletada.Id,
+                    Subtotal = pedido.Subtotal,
+                    Iva = pedido.Iva,
+                    PorcentajeIva = 0, // ajustá si tu Pedido guarda el porcentaje
+                    Total = pedido.Total,
+                    Notas = $"Generada automáticamente desde pedido {pedido.NumeroPedido}",
+                    FechaVenta = DateTime.Now,
+                    Origen = "WEB",
+                    PedidoId = pedido.Id
+                };
+
+                _context.Ventas.Add(venta);
+                await _context.SaveChangesAsync(); // necesitamos el Id de la venta
+
+                // 7. Copiar los detalles de PedidoDetalle → VentaDetalle
+                foreach (var detalle in detallesValidos)
+                {
+                    // Validar stock
+                    var producto = await _context.Productos.FindAsync(detalle.ProductoId!.Value);
+                    if (producto != null)
+                    {
+                        if (producto.Stock < detalle.Cantidad)
+                            throw new Exception(
+                                $"Stock insuficiente para '{producto.Nombre}'. " +
+                                $"Disponible: {producto.Stock}, requerido: {detalle.Cantidad}.");
+
+                        producto.Stock -= detalle.Cantidad;
+                        producto.UltimaActualizacion = DateTime.Now;
+                    }
+
+                    _context.VentaDetalles.Add(new VentaDetalle
+                    {
+                        VentaId = venta.Id,
+                        ProductoId = detalle.ProductoId!.Value,
+                        Cantidad = detalle.Cantidad,
+                        PrecioUnitario = detalle.PrecioUnitario,
+                        Descuento = 0,
+                        Subtotal = detalle.Subtotal
+                    });
+                }
+
+                // 8. Actualizar totales del turno
+                turnoActivo.TotalVentas += pedido.Total;
+                turnoActivo.ResumenVentas += 1;
+
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+
+                return await ObtenerPorId(venta.Id)
+                    ?? _mapper.Map<VentaDto>(venta);
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
+        }
+
+        // ── MÉTODOS EXISTENTES (sin cambios) ────────────────────────────────────
 
         public async Task<List<VentaDto>> ObtenerTodos()
         {
@@ -65,7 +198,6 @@ namespace Syspharma.Business.Services
 
         public async Task<VentaDto> Crear(VentaCreateDto dto)
         {
-            // 1. VALIDACIÓN PREVIA DE SEGURIDAD (Evita FK Conflict)
             if (dto.TurnoId <= 0)
                 throw new Exception("No se puede crear la venta: El ID de Turno no es válido (0). Asegúrese de tener una caja abierta.");
 
@@ -80,16 +212,13 @@ namespace Syspharma.Business.Services
             using var transaction = await _context.Database.BeginTransactionAsync();
             try
             {
-                // 2. CÁLCULO MANUAL DE TOTALES (Para asegurar que no se guarde en $0)
                 decimal subtotalProd = dto.Detalles?.Sum(d => (d.Cantidad * d.PrecioUnitario) - d.Descuento) ?? 0;
                 decimal subtotalServ = dto.Servicios?.Sum(s => (s.Cantidad * s.PrecioUnitario) - s.Descuento) ?? 0;
                 decimal subtotalFinal = subtotalProd + subtotalServ;
-
                 decimal porcentajeIva = dto.PorcentajeIva > 0 ? dto.PorcentajeIva : 0;
                 decimal ivaFinal = subtotalFinal * (porcentajeIva / 100);
                 decimal totalFinal = subtotalFinal + ivaFinal;
 
-                // 3. CREAR LA ENTIDAD VENTA
                 var venta = new Venta
                 {
                     NumeroVenta = $"VNT-{DateTime.Now:yyyyMMddHHmmss}",
@@ -99,7 +228,7 @@ namespace Syspharma.Business.Services
                     ClienteDocumento = dto.ClienteDocumento,
                     ClienteTelefono = dto.ClienteTelefono,
                     MetodoPagoId = dto.MetodoPagoId,
-                    EstadoId = 1, // 1 = Completada
+                    EstadoId = 1,
                     Subtotal = subtotalFinal,
                     Iva = ivaFinal,
                     PorcentajeIva = porcentajeIva,
@@ -111,15 +240,13 @@ namespace Syspharma.Business.Services
                 };
 
                 _context.Ventas.Add(venta);
-                // Guardamos cambios parciales para generar el ID de la venta
                 await _context.SaveChangesAsync();
 
-                // 4. GUARDAR DETALLES DE PRODUCTOS Y ACTUALIZAR STOCK
                 if (dto.Detalles != null && dto.Detalles.Any())
                 {
                     foreach (var d in dto.Detalles)
                     {
-                        var nuevoDetalle = new VentaDetalle
+                        _context.VentaDetalles.Add(new VentaDetalle
                         {
                             VentaId = venta.Id,
                             ProductoId = d.ProductoId,
@@ -127,10 +254,8 @@ namespace Syspharma.Business.Services
                             PrecioUnitario = d.PrecioUnitario,
                             Descuento = d.Descuento,
                             Subtotal = (d.Cantidad * d.PrecioUnitario) - d.Descuento
-                        };
-                        _context.VentaDetalles.Add(nuevoDetalle);
+                        });
 
-                // Descuento de stock con validación
                         var producto = await _context.Productos.FindAsync(d.ProductoId);
                         if (producto != null)
                         {
@@ -142,12 +267,11 @@ namespace Syspharma.Business.Services
                     }
                 }
 
-                // 5. GUARDAR DETALLES DE SERVICIOS
                 if (dto.Servicios != null && dto.Servicios.Any())
                 {
                     foreach (var s in dto.Servicios)
                     {
-                        var nuevoServicioDetalle = new VentaDetalleServicio
+                        _context.VentaDetalleServicios.Add(new VentaDetalleServicio
                         {
                             VentaId = venta.Id,
                             ServicioId = s.ServicioId,
@@ -156,40 +280,34 @@ namespace Syspharma.Business.Services
                             Descuento = s.Descuento,
                             Subtotal = (s.Cantidad * s.PrecioUnitario) - s.Descuento,
                             CitaId = s.CitaId
-                        };
-                        _context.VentaDetalleServicios.Add(nuevoServicioDetalle);
+                        });
 
-                        // Mark Cita as Pagada
                         if (s.CitaId.HasValue && s.CitaId.Value > 0)
                         {
                             var cita = await _context.Citas.FindAsync(s.CitaId.Value);
                             if (cita != null)
                             {
                                 cita.VentaId = venta.Id;
-                                var estadoPagada = await _context.EstadosCita.FirstOrDefaultAsync(e => e.Nombre == "Pagada");
+                                var estadoPagada = await _context.EstadosCita
+                                    .FirstOrDefaultAsync(e => e.Nombre == "Pagada");
                                 if (estadoPagada != null)
-                                {
                                     cita.EstadoId = estadoPagada.Id;
-                                }
                             }
                         }
                     }
                 }
 
-                // 6. ACTUALIZAR TOTALES DEL TURNO (CAJA)
                 turno.TotalVentas += totalFinal;
                 turno.ResumenVentas += 1;
 
                 await _context.SaveChangesAsync();
                 await transaction.CommitAsync();
 
-                // Devolvemos el DTO completo mapeado
                 return await ObtenerPorId(venta.Id) ?? _mapper.Map<VentaDto>(venta);
             }
             catch (Exception ex)
             {
                 await transaction.RollbackAsync();
-                // Enviamos el detalle interno para depurar en el frontend
                 string innerMessage = ex.InnerException != null ? ex.InnerException.Message : "";
                 throw new Exception($"Error al procesar la venta: {ex.Message}. {innerMessage}");
             }
@@ -199,7 +317,6 @@ namespace Syspharma.Business.Services
         {
             var venta = await _context.Ventas.FindAsync(dto.Id);
             if (venta == null) throw new Exception("La venta no existe.");
-
             _mapper.Map(dto, venta);
             await _context.SaveChangesAsync();
             return await ObtenerPorId(venta.Id) ?? _mapper.Map<VentaDto>(venta);

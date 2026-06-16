@@ -15,6 +15,7 @@ namespace Syspharma.API.Controllers
         public ServicioController(IServicioService service) => _service = service;
 
         [HttpGet]
+        [AllowAnonymous]
         public async Task<IActionResult> ObtenerTodos() => Ok(await _service.ObtenerTodos());
 
         [HttpGet("{id}")]

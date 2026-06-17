@@ -31,6 +31,8 @@ public partial class Producto
 
     public DateTime? UltimaActualizacion { get; set; }
 
+    public DateOnly? FechaVencimientoProxima { get; set; }
+
     public virtual Categoria Categoria { get; set; } = null!;
 
     public virtual ICollection<CompraDetalle> CompraDetalles { get; set; } = new List<CompraDetalle>();

@@ -1,4 +1,6 @@
-﻿namespace Syspharma.Domain.DTOs
+﻿using System;
+
+namespace Syspharma.Domain.DTOs
 {
     public class CompraDetalleDto
     {
@@ -8,6 +10,8 @@
         public int Cantidad { get; set; }
         public decimal PrecioUnitario { get; set; }
         public decimal Subtotal { get; set; }
+        public string? Lote { get; set; }
+        public DateOnly? FechaVencimiento { get; set; }
     }
 
     public class CompraDto
@@ -35,6 +39,8 @@
         public int ProductoId { get; set; }
         public int Cantidad { get; set; }
         public decimal PrecioUnitario { get; set; }
+        public string? Lote { get; set; }
+        public DateOnly? FechaVencimiento { get; set; }
     }
 
     public class CompraCreateDto
@@ -56,6 +62,7 @@
         public string? Notas { get; set; }
         public string? Observaciones { get; set; }
         public DateTime? FechaEntrega { get; set; }
+        public decimal PorcentajeIva { get; set; } = 19;
         public List<CompraDetalleCreateDto> Detalles { get; set; } = new();
     }
 }

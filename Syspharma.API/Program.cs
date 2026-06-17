@@ -13,6 +13,8 @@ using Syspharma.Business.Services;
 using Syspharma.Data.Context;
 using Syspharma.Data.Entities;
 using Syspharma.Data.Repositories;
+using Microsoft.Extensions.FileProviders;
+using System.IO;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -143,6 +145,15 @@ builder.Services.AddTransient<IEmailSender, SmtpEmailSender>();
 var app = builder.Build();
 
 app.UseRouting();
+
+// Forzar ruta correcta de wwwroot para servir archivos estáticos
+var wwwrootPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new PhysicalFileProvider(wwwrootPath),
+    RequestPath = ""
+});
+
 app.UseHttpsRedirection();
 app.UseCors("AllowFront");
 

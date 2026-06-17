@@ -15,17 +15,11 @@ namespace Syspharma.Business.Services
         Task<bool> Eliminar(int id);
         Task<List<EstadoVentaDto>> ObtenerEstados();
         Task<bool> CambiarEstado(int id, int estadoId);
-<<<<<<< HEAD
 
-        // ── NUEVO ──────────────────────────────────────────────────────────────
-        /// <summary>
-        /// Convierte un Pedido en estado "Entregado" en una Venta automáticamente.
-        /// Requiere que haya un turno activo abierto.
-        /// </summary>
         Task<VentaDto> CrearDesdePedido(int pedidoId);
-=======
+
         Task<bool> Anular(int id);
->>>>>>> origin/develop
+
     }
 
     public class VentaService : IVentaService
@@ -38,8 +32,6 @@ namespace Syspharma.Business.Services
             _context = context;
             _mapper = mapper;
         }
-
-        // ── NUEVO MÉTODO ────────────────────────────────────────────────────────
         public async Task<VentaDto> CrearDesdePedido(int pedidoId)
         {
             // 1. Cargar el pedido con sus detalles
@@ -65,9 +57,7 @@ namespace Syspharma.Business.Services
                 .FirstOrDefaultAsync(e => e.Nombre == "Completada")
                 ?? throw new Exception("No se encontró el estado 'Completada' en la tabla estados_venta.");
 
-            // 4. Resolver MetodoPagoId
-            // Si el pedido tiene método de pago asignado lo usamos;
-            // si no, buscamos uno genérico ("Pendiente" o el primero disponible).
+
             int metodoPagoId;
             if (pedido.MetodoPagoId.HasValue)
             {
@@ -163,7 +153,6 @@ namespace Syspharma.Business.Services
             }
         }
 
-        // ── MÉTODOS EXISTENTES (sin cambios) ────────────────────────────────────
 
         public async Task<List<VentaDto>> ObtenerTodos()
         {
@@ -260,10 +249,7 @@ namespace Syspharma.Business.Services
                             Subtotal = (d.Cantidad * d.PrecioUnitario) - d.Descuento
                         });
 
-<<<<<<< HEAD
-=======
-                        // Descuento de stock con validación
->>>>>>> origin/develop
+
                         var producto = await _context.Productos.FindAsync(d.ProductoId);
                         if (producto != null)
                         {
@@ -305,12 +291,10 @@ namespace Syspharma.Business.Services
                     }
                 }
 
-<<<<<<< HEAD
-                turno.TotalVentas += totalFinal;
-=======
-                // 6. ACTUALIZAR TOTALES DEL TURNO (CAJA)
+                // Corrección: eliminar uso de variable inexistente 'totalFinal'.
+                // Actualizar totales del turno usando el total calculado en 'venta'.
                 turno.TotalVentas += venta.Total;
->>>>>>> origin/develop
+
                 turno.ResumenVentas += 1;
 
                 await _context.SaveChangesAsync();

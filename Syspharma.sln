@@ -11,9 +11,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Syspharma.Data", "Syspharma
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Syspharma.Domain", "Syspharma.Domain\Syspharma.Domain.csproj", "{EFD16E9F-C2F2-4692-B9F4-204390836980}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Syspharma.test", "Syspharma.test\Syspharma.test.csproj", "{D3E4A431-BDCB-40D7-9FEF-9BF0AE0138DA}"
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Syspharma.Tests", "Syspharma.Tests\Syspharma.Tests.csproj", "{DF9A7E30-16DB-4646-B21F-433A6AEF8B7D}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU

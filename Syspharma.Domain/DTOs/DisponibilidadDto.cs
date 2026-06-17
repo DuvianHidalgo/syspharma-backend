@@ -23,7 +23,7 @@ namespace Syspharma.Domain.DTOs
         public string TardeFin { get; set; } = null!;
     }
 
-    public class GuardarHorarioDto
+    public class GuardarHorarioItemDto
     {
         public int MedicoId { get; set; }
         public List<HorarioItemDto> Horarios { get; set; } = new();

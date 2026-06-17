@@ -15,15 +15,7 @@ namespace Syspharma.Business.Services
         Task<bool> Eliminar(int id);
         Task<List<EstadoVentaDto>> ObtenerEstados();
         Task<bool> CambiarEstado(int id, int estadoId);
-<<<<<<< Updated upstream
-
-        Task<VentaDto> CrearDesdePedido(int pedidoId);
-
         Task<bool> Anular(int id);
-
-=======
-        Task<bool> Anular(int id);
->>>>>>> Stashed changes
     }
 
     public class VentaService : IVentaService
@@ -213,11 +205,8 @@ namespace Syspharma.Business.Services
                 decimal subtotalServ = dto.Servicios?.Sum(s => (s.Cantidad * s.PrecioUnitario) - s.Descuento) ?? 0;
                 decimal subtotalFinal = subtotalProd + subtotalServ;
                 decimal porcentajeIva = dto.PorcentajeIva > 0 ? dto.PorcentajeIva : 0;
-<<<<<<< Updated upstream
-=======
                 decimal ivaFinal = Math.Round(subtotalFinal * (porcentajeIva / 100), 2);
                 decimal totalFinal = subtotalFinal + ivaFinal;
->>>>>>> Stashed changes
 
                 var venta = new Venta
                 {
@@ -257,11 +246,6 @@ namespace Syspharma.Business.Services
                             Descuento = d.Descuento,
                             Subtotal = (d.Cantidad * d.PrecioUnitario) - d.Descuento
                         });
-<<<<<<< Updated upstream
-
-
-=======
->>>>>>> Stashed changes
                         var producto = await _context.Productos.FindAsync(d.ProductoId);
                         if (producto != null)
                         {
@@ -284,46 +268,16 @@ namespace Syspharma.Business.Services
                             Cantidad = s.Cantidad,
                             PrecioUnitario = s.PrecioUnitario,
                             Descuento = s.Descuento,
-<<<<<<< Updated upstream
-                            Subtotal = (s.Cantidad * s.PrecioUnitario) - s.Descuento,
-                            CitaId = s.CitaId
-                        });
-
-                        if (s.CitaId.HasValue && s.CitaId.Value > 0)
-                        {
-                            var cita = await _context.Citas.FindAsync(s.CitaId.Value);
-                            if (cita != null)
-                            {
-                                cita.VentaId = venta.Id;
-                                var estadoPagada = await _context.EstadosCita
-                                    .FirstOrDefaultAsync(e => e.Nombre == "Pagada");
-                                if (estadoPagada != null)
-                                    cita.EstadoId = estadoPagada.Id;
-                            }
-                        }
-                    }
-                }
-
-                // Corrección: eliminar uso de variable inexistente 'totalFinal'.
-                // Actualizar totales del turno usando el total calculado en 'venta'.
-                turno.TotalVentas += venta.Total;
-
-=======
                             Subtotal = (s.Cantidad * s.PrecioUnitario) - s.Descuento
                         });
                     }
                 }
 
                 turno.TotalVentas += totalFinal;
->>>>>>> Stashed changes
                 turno.ResumenVentas += 1;
 
                 await _context.SaveChangesAsync();
                 await transaction.CommitAsync();
-<<<<<<< Updated upstream
-
-=======
->>>>>>> Stashed changes
                 return await ObtenerPorId(venta.Id) ?? _mapper.Map<VentaDto>(venta);
             }
             catch (Exception ex)

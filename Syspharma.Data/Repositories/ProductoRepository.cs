@@ -46,23 +46,7 @@ namespace Syspharma.Data.Repositories
             Estado = p.Estado,
             FechaCreacion = p.FechaCreacion,
             UltimaActualizacion = p.UltimaActualizacion,
-<<<<<<< Updated upstream
-
-            // --- NUEVO MAPEO DEL MEDICAMENTO ---
-            Medicamento = p.ProductoMedicamento != null ? new ProductoMedicamentoDto
-            {
-                Id = p.ProductoMedicamento.Id,
-                ProductoId = p.ProductoMedicamento.ProductoId,
-                Composicion = p.ProductoMedicamento.Composicion,
-                Concentracion = p.ProductoMedicamento.Concentracion,
-                Presentacion = p.ProductoMedicamento.Presentacion,
-                ViaAdministracion = p.ProductoMedicamento.ViaAdministracion,
-                RegistroSanitario = p.ProductoMedicamento.RegistroSanitario,
-                RequiereFormula = p.ProductoMedicamento.RequiereFormula
-            } : null
-=======
             FechaVencimientoProxima = p.FechaVencimientoProxima
->>>>>>> Stashed changes
         };
 
         public async Task<List<ProductoDto>> ObtenerTodos()
@@ -88,23 +72,7 @@ namespace Syspharma.Data.Repositories
                     Estado = p.Estado,
                     FechaCreacion = p.FechaCreacion,
                     UltimaActualizacion = p.UltimaActualizacion,
-<<<<<<< Updated upstream
-
-                    // --- NUEVO: Proyección del medicamento en la lista ---
-                    Medicamento = p.ProductoMedicamento != null ? new ProductoMedicamentoDto
-                    {
-                        Id = p.ProductoMedicamento.Id,
-                        ProductoId = p.ProductoMedicamento.ProductoId,
-                        Composicion = p.ProductoMedicamento.Composicion,
-                        Concentracion = p.ProductoMedicamento.Concentracion,
-                        Presentacion = p.ProductoMedicamento.Presentacion,
-                        ViaAdministracion = p.ProductoMedicamento.ViaAdministracion,
-                        RegistroSanitario = p.ProductoMedicamento.RegistroSanitario,
-                        RequiereFormula = p.ProductoMedicamento.RequiereFormula
-                    } : null
-=======
                     FechaVencimientoProxima = p.FechaVencimientoProxima
->>>>>>> Stashed changes
                 })
                 .ToListAsync();
         }

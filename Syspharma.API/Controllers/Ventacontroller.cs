@@ -73,12 +73,8 @@ namespace Syspharma.API.Controllers
         {
             try
             {
-<<<<<<< Updated upstream
-                await _service.Anular(id);
-=======
                 var result = await _service.Anular(id);
                 if (!result) return NotFound(new { message = "Venta no encontrada" });
->>>>>>> Stashed changes
                 return Ok(new { message = "Venta anulada correctamente" });
             }
             catch (Exception ex) { return BadRequest(new { message = ex.Message }); }

@@ -25,17 +25,6 @@ namespace Syspharma.API.Controllers
             return Ok(result);
         }
 
-<<<<<<< Updated upstream
-        // GET /api/Categoria/todas — activas + inactivas (para la página de gestión de categorías)
-        [HttpGet("todas")]
-        public async Task<IActionResult> ObtenerTodosConInactivos()
-        {
-            var result = await _service.ObtenerTodosConInactivos();
-            return Ok(result);
-        }
-
-        [HttpGet("{id:int}")]
-=======
         [HttpGet("todas")]
         public async Task<IActionResult> ObtenerTodas()
         {
@@ -44,7 +33,6 @@ namespace Syspharma.API.Controllers
         }
 
         [HttpGet("{id}")]
->>>>>>> Stashed changes
         public async Task<IActionResult> ObtenerPorId(int id)
         {
             var result = await _service.ObtenerPorId(id);

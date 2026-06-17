@@ -12,13 +12,7 @@ namespace Syspharma.Business.Services
         Task<GastoDto> Crear(GastoCreateDto dto);
         Task<GastoDto> Actualizar(GastoUpdateDto dto);
         Task<bool> Eliminar(int id);
-<<<<<<< Updated upstream
-        Task<List<GastoDto>> ObtenerHoy(int? usuarioId);
-        Task<GastoKpiDto> ObtenerKpis(DateTime? fecha);
-        Task<bool> Anular(int id, string notas);
-=======
         Task<bool> Anular(int id, string? motivo);
->>>>>>> Stashed changes
     }
 
     public class GastoService : IGastoService
@@ -33,12 +27,6 @@ namespace Syspharma.Business.Services
         public Task<GastoDto> Crear(GastoCreateDto dto) => _repo.Crear(dto);
         public Task<GastoDto> Actualizar(GastoUpdateDto dto) => _repo.Actualizar(dto);
         public Task<bool> Eliminar(int id) => _repo.Eliminar(id);
-<<<<<<< Updated upstream
-        public Task<List<GastoDto>> ObtenerHoy(int? usuarioId) => _repo.ObtenerHoy(usuarioId);
-        public Task<GastoKpiDto> ObtenerKpis(DateTime? fecha) => _repo.ObtenerKpis(fecha);
-        public Task<bool> Anular(int id, string notas) => _repo.Anular(id, notas);
-=======
         public Task<bool> Anular(int id, string? motivo) => _repo.Anular(id, motivo);
->>>>>>> Stashed changes
     }
 }

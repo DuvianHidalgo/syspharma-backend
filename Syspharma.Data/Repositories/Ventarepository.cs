@@ -45,13 +45,6 @@ namespace Syspharma.Data.Repositories
             Iva = v.Iva,
             Total = v.Total,
             FechaVenta = v.FechaVenta,
-<<<<<<< Updated upstream
-            Origen = v.Origen,
-            PedidoId = v.PedidoId,
-
-            // Enviamos los productos mapeados
-=======
->>>>>>> Stashed changes
             Detalles = v.VentaDetalles?.Select(d => new VentaDetalleDto
             {
                 Id = d.Id,
@@ -82,43 +75,7 @@ namespace Syspharma.Data.Repositories
                 .Include(v => v.VentaDetallesServicios).ThenInclude(s => s.Servicio)
                 .OrderByDescending(v => v.FechaVenta)
                 .ToListAsync();
-<<<<<<< Updated upstream
-
-            // Convertimos a DTO uno por uno asegurando que las listas existan
-            return ventas.Select(v => new VentaDto
-            {
-                Id = v.Id,
-                NumeroVenta = v.NumeroVenta,
-                ClienteNombre = v.ClienteNombre ?? "Consumidor Final",
-                MetodoPagoNombre = v.MetodoPago?.Nombre ?? "Efectivo",
-                EstadoNombre = v.Estado?.Nombre ?? "Completada",
-                Total = v.Total,
-                Subtotal = v.Subtotal,
-                FechaVenta = v.FechaVenta,
-                Origen = v.Origen,
-                PedidoId = v.PedidoId,
-                // PASAMOS LOS PRODUCTOS (forzando listas no nulas)
-                Detalles = v.VentaDetalles?.Select(d => new VentaDetalleDto
-                {
-                    Id = d.Id,
-                    ProductoNombre = d.Producto?.Nombre ?? "Producto",
-                    Cantidad = d.Cantidad,
-                    PrecioUnitario = d.PrecioUnitario,
-                    Subtotal = d.Subtotal
-                }).ToList() ?? new List<VentaDetalleDto>(),
-                // PASAMOS LOS SERVICIOS (forzando listas no nulas)
-                Servicios = v.VentaDetallesServicios?.Select(s => new VentaDetalleServicioDto
-                {
-                    Id = s.Id,
-                    ServicioNombre = s.Servicio?.Nombre ?? "Servicio",
-                    Cantidad = s.Cantidad,
-                    PrecioUnitario = s.PrecioUnitario,
-                    Subtotal = s.Subtotal
-                }).ToList() ?? new List<VentaDetalleServicioDto>()
-            }).ToList();
-=======
             return ventas.Select(MapDto).ToList();
->>>>>>> Stashed changes
         }
 
         public async Task<VentaDto?> ObtenerPorId(int id)
@@ -153,17 +110,10 @@ namespace Syspharma.Data.Repositories
                     MetodoPagoId = dto.MetodoPagoId,
                     EstadoId = 1,
                     Subtotal = subtotalFinal,
-<<<<<<< Updated upstream
-                    Total = totalFinal, // YA TIENE EL COSTO DE LOS SERVICIOS
-                    FechaVenta = DateTime.Now,
-                    Origen = string.IsNullOrWhiteSpace(dto.Origen) ? "CAJA" : dto.Origen,
-                    PedidoId = dto.PedidoId
-=======
                     Iva = iva,
                     Total = totalFinal,
                     Notas = dto.Notas,
                     FechaVenta = DateTime.Now
->>>>>>> Stashed changes
                 };
 
                 _context.Ventas.Add(venta);

@@ -28,42 +28,7 @@ namespace Syspharma.API.Controllers
         }
         [HttpGet("turno/{turnoId}")]
         public async Task<IActionResult> ObtenerPorTurno(int turnoId) =>
-<<<<<<< Updated upstream
-            Ok(await _service.ObtenerPorTurno(turnoId));
-
-        // NUEVO: Gastos de hoy
-        [HttpGet("today")]
-        public async Task<IActionResult> ObtenerHoy([FromQuery] int? usuarioId = null)
-        {
-            try
-            {
-                var result = await _service.ObtenerHoy(usuarioId);
-                return Ok(new { success = true, data = result });
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { success = false, message = ex.Message });
-            }
-        }
-
-        // NUEVO: KPIs
-        [HttpGet("kpis")]
-        public async Task<IActionResult> ObtenerKpis([FromQuery] DateTime? fecha = null)
-        {
-            try
-            {
-                var result = await _service.ObtenerKpis(fecha);
-                return Ok(new { success = true, data = result });
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { success = false, message = ex.Message });
-            }
-        }
-
-=======
             Ok(new { data = await _service.ObtenerPorTurno(turnoId) });
->>>>>>> Stashed changes
         [HttpPost]
         public async Task<IActionResult> Crear([FromBody] GastoCreateDto dto)
         {
@@ -84,24 +49,6 @@ namespace Syspharma.API.Controllers
             try { return Ok(await _service.Actualizar(dto)); }
             catch (Exception ex) { return BadRequest(new { message = ex.Message }); }
         }
-<<<<<<< Updated upstream
-
-        // NUEVO: Anular
-        [HttpPut("{id}/anular")]
-        public async Task<IActionResult> Anular(int id, [FromBody] string notas = null)
-        {
-            try
-            {
-                await _service.Anular(id, notas);
-                return Ok(new { success = true, message = "Gasto anulado correctamente" });
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { success = false, message = ex.Message });
-            }
-        }
-
-=======
         [HttpPut("{id}/anular")]
         public async Task<IActionResult> Anular(int id, [FromBody] string? motivo)
         {
@@ -112,7 +59,6 @@ namespace Syspharma.API.Controllers
             }
             catch (Exception ex) { return BadRequest(new { message = ex.Message }); }
         }
->>>>>>> Stashed changes
         [HttpDelete("{id}")]
         public async Task<IActionResult> Eliminar(int id)
         {

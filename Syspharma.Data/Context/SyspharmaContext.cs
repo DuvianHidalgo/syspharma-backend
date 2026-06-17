@@ -48,13 +48,10 @@ public partial class SyspharmaContext : IdentityDbContext<Usuario, IdentityRole<
     public virtual DbSet<VVentaDetalle> VVentaDetalles { get; set; }
     public virtual DbSet<Venta> Ventas { get; set; }
     public virtual DbSet<VentaDetalle> VentaDetalles { get; set; }
-<<<<<<< Updated upstream
-=======
     // Nueva DbSet agregada
     public virtual DbSet<Devolucion> Devoluciones { get; set; }
     public virtual DbSet<DetalleDevolucion> DetallesDevolucion { get; set; }
     public virtual DbSet<EstadoDevolucion> EstadosDevoluciones { get; set; }
->>>>>>> Stashed changes
     public virtual DbSet<VentaDetalleServicio> VentaDetalleServicios { get; set; }
 
     public virtual DbSet<EstadoDevolucion> EstadosDevoluciones { get; set; }
@@ -206,8 +203,6 @@ public partial class SyspharmaContext : IdentityDbContext<Usuario, IdentityRole<
             entity.Property(e => e.Nombre).HasMaxLength(30).HasColumnName("nombre");
         });
 
-<<<<<<< Updated upstream
-=======
         modelBuilder.Entity<Gasto>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("PK__gastos__3213E83F9BA914EE");
@@ -254,7 +249,6 @@ public partial class SyspharmaContext : IdentityDbContext<Usuario, IdentityRole<
             entity.HasOne(d => d.Medico).WithMany().HasForeignKey(d => d.MedicoId).OnDelete(DeleteBehavior.Cascade).HasConstraintName("FK_DisponibilidadBloqueos_Medicos");
         });
 
->>>>>>> Stashed changes
         modelBuilder.Entity<Medico>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("PK__medicos__3213E83F08A4C5C1");

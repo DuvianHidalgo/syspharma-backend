@@ -1,7 +1,3 @@
-<<<<<<< Updated upstream
-﻿using System;
-=======
->>>>>>> Stashed changes
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -33,9 +29,6 @@ namespace Syspharma.API.Controllers
             return Ok(result);
         }
 
-<<<<<<< Updated upstream
-        [HttpGet("{id:int}")]
-=======
         [HttpGet("proximos-a-vencer")]
         public async Task<IActionResult> ProximosAVencer([FromQuery] int dias = 30)
         {
@@ -44,7 +37,6 @@ namespace Syspharma.API.Controllers
         }
 
         [HttpGet("{id}")]
->>>>>>> Stashed changes
         public async Task<IActionResult> ObtenerPorId(int id)
         {
             var result = await _service.ObtenerPorId(id);

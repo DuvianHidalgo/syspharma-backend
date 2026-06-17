@@ -1,5 +1,8 @@
+<<<<<<< Updated upstream
 ﻿using System;
 
+=======
+>>>>>>> Stashed changes
 namespace Syspharma.Domain.DTOs
 {
     public class GastoDto
@@ -25,12 +28,18 @@ namespace Syspharma.Domain.DTOs
         public string? Comprobante { get; set; }
         public string? ComprobanteUrl { get; set; }
         public DateTime? FechaGasto { get; set; }
+<<<<<<< Updated upstream
         public DateTime? FechaCreacion { get; set; }
 
         // Campos específicos para el frontend (ExpensesModal)
         public string? Hora { get; set; }
         public DateTime? Fecha { get; set; }
         public string? Observaciones { get; set; }
+=======
+        public bool Anulado { get; set; }
+        public DateTime? FechaAnulacion { get; set; }
+        public string? MotivoAnulacion { get; set; }
+>>>>>>> Stashed changes
     }
 
     public class GastoCreateDto

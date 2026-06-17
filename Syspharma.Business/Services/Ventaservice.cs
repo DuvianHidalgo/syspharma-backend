@@ -15,11 +15,15 @@ namespace Syspharma.Business.Services
         Task<bool> Eliminar(int id);
         Task<List<EstadoVentaDto>> ObtenerEstados();
         Task<bool> CambiarEstado(int id, int estadoId);
+<<<<<<< Updated upstream
 
         Task<VentaDto> CrearDesdePedido(int pedidoId);
 
         Task<bool> Anular(int id);
 
+=======
+        Task<bool> Anular(int id);
+>>>>>>> Stashed changes
     }
 
     public class VentaService : IVentaService
@@ -209,6 +213,11 @@ namespace Syspharma.Business.Services
                 decimal subtotalServ = dto.Servicios?.Sum(s => (s.Cantidad * s.PrecioUnitario) - s.Descuento) ?? 0;
                 decimal subtotalFinal = subtotalProd + subtotalServ;
                 decimal porcentajeIva = dto.PorcentajeIva > 0 ? dto.PorcentajeIva : 0;
+<<<<<<< Updated upstream
+=======
+                decimal ivaFinal = Math.Round(subtotalFinal * (porcentajeIva / 100), 2);
+                decimal totalFinal = subtotalFinal + ivaFinal;
+>>>>>>> Stashed changes
 
                 var venta = new Venta
                 {
@@ -248,8 +257,11 @@ namespace Syspharma.Business.Services
                             Descuento = d.Descuento,
                             Subtotal = (d.Cantidad * d.PrecioUnitario) - d.Descuento
                         });
+<<<<<<< Updated upstream
 
 
+=======
+>>>>>>> Stashed changes
                         var producto = await _context.Productos.FindAsync(d.ProductoId);
                         if (producto != null)
                         {
@@ -272,6 +284,7 @@ namespace Syspharma.Business.Services
                             Cantidad = s.Cantidad,
                             PrecioUnitario = s.PrecioUnitario,
                             Descuento = s.Descuento,
+<<<<<<< Updated upstream
                             Subtotal = (s.Cantidad * s.PrecioUnitario) - s.Descuento,
                             CitaId = s.CitaId
                         });
@@ -295,11 +308,22 @@ namespace Syspharma.Business.Services
                 // Actualizar totales del turno usando el total calculado en 'venta'.
                 turno.TotalVentas += venta.Total;
 
+=======
+                            Subtotal = (s.Cantidad * s.PrecioUnitario) - s.Descuento
+                        });
+                    }
+                }
+
+                turno.TotalVentas += totalFinal;
+>>>>>>> Stashed changes
                 turno.ResumenVentas += 1;
 
                 await _context.SaveChangesAsync();
                 await transaction.CommitAsync();
+<<<<<<< Updated upstream
 
+=======
+>>>>>>> Stashed changes
                 return await ObtenerPorId(venta.Id) ?? _mapper.Map<VentaDto>(venta);
             }
             catch (Exception ex)
@@ -319,10 +343,59 @@ namespace Syspharma.Business.Services
             return await ObtenerPorId(venta.Id) ?? _mapper.Map<VentaDto>(venta);
         }
 
+        public async Task<bool> Anular(int id)
+        {
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            try
+            {
+                var venta = await _context.Ventas
+                    .Include(v => v.VentaDetalles)
+                    .FirstOrDefaultAsync(v => v.Id == id);
+                if (venta == null) return false;
+
+                // Revertir stock
+                foreach (var d in venta.VentaDetalles)
+                {
+                    var producto = await _context.Productos.FindAsync(d.ProductoId);
+                    if (producto != null)
+                    {
+                        producto.Stock += d.Cantidad;
+                        producto.UltimaActualizacion = DateTime.Now;
+                    }
+                }
+
+                // Revertir turno
+                if (venta.TurnoId > 0)
+                {
+                    var turno = await _context.Turnos.FindAsync(venta.TurnoId);
+                    if (turno != null)
+                    {
+                        turno.TotalVentas -= venta.Total;
+                        turno.ResumenVentas -= 1;
+                    }
+                }
+
+                venta.EstadoId = 3; // anulada
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+                return true;
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
+        }
+
         public async Task<bool> Eliminar(int id)
         {
-            var v = await _context.Ventas.FindAsync(id);
+            var v = await _context.Ventas
+                .Include(v => v.VentaDetalles)
+                .Include(v => v.VentaDetallesServicios)
+                .FirstOrDefaultAsync(v => v.Id == id);
             if (v == null) return false;
+            _context.VentaDetalles.RemoveRange(v.VentaDetalles);
+            _context.VentaDetalleServicios.RemoveRange(v.VentaDetallesServicios);
             _context.Ventas.Remove(v);
             await _context.SaveChangesAsync();
             return true;

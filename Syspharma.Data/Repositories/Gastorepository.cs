@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Syspharma.Data.Context;
 using Syspharma.Data.Entities;
 using Syspharma.Domain.DTOs;
@@ -9,13 +9,18 @@ namespace Syspharma.Data.Repositories
     {
         Task<List<GastoDto>> ObtenerTodos();
         Task<List<GastoDto>> ObtenerPorTurno(int turnoId);
+        Task<List<GastoDto>> ObtenerHoy(int? usuarioId);
         Task<GastoDto?> ObtenerPorId(int id);
         Task<GastoDto> Crear(GastoCreateDto dto);
         Task<GastoDto> Actualizar(GastoUpdateDto dto);
         Task<bool> Eliminar(int id);
+<<<<<<< Updated upstream
         Task<List<GastoDto>> ObtenerHoy(int? usuarioId);
         Task<GastoKpiDto> ObtenerKpis(DateTime? fecha);
         Task<bool> Anular(int id, string notas);
+=======
+        Task<bool> Anular(int id, string? motivo);
+>>>>>>> Stashed changes
     }
 
     public class GastoRepository : IGastoRepository
@@ -54,6 +59,12 @@ namespace Syspharma.Data.Repositories
             Categoria = g.Categoria,
             Comprobante = g.Comprobante,
             FechaGasto = g.FechaGasto,
+<<<<<<< Updated upstream
+=======
+            Anulado = g.Anulado,
+            FechaAnulacion = g.FechaAnulacion,
+            MotivoAnulacion = g.MotivoAnulacion
+>>>>>>> Stashed changes
         };
 
         public async Task<List<GastoDto>> ObtenerTodos() =>
@@ -64,11 +75,28 @@ namespace Syspharma.Data.Repositories
                 .ToListAsync();
 
         public async Task<List<GastoDto>> ObtenerPorTurno(int turnoId) =>
+<<<<<<< Updated upstream
             await _context.Gastos
                 .Include(g => g.Usuario)
                 .Where(g => g.TurnoId == turnoId)
                 .Select(g => MapDto(g))
                 .ToListAsync();
+=======
+            (await _context.Gastos.Include(g => g.Usuario).Where(g => g.TurnoId == turnoId && !g.Anulado).ToListAsync()).Select(MapDto).ToList();
+
+        public async Task<List<GastoDto>> ObtenerHoy(int? usuarioId)
+        {
+            var hoy = DateTime.Today;
+            var query = _context.Gastos.Include(g => g.Usuario)
+                .Where(g => g.FechaGasto.HasValue && g.FechaGasto.Value.Date == hoy && !g.Anulado);
+
+            if (usuarioId.HasValue)
+                query = query.Where(g => g.UsuarioId == usuarioId.Value);
+
+            return (await query.OrderByDescending(g => g.FechaGasto).ToListAsync())
+                .Select(MapDto).ToList();
+        }
+>>>>>>> Stashed changes
 
         public async Task<GastoDto?> ObtenerPorId(int id)
         {
@@ -103,6 +131,7 @@ namespace Syspharma.Data.Repositories
             return MapDto(gasto);
         }
 
+<<<<<<< Updated upstream
         public async Task<GastoDto> Actualizar(GastoUpdateDto dto)
         {
             var gasto = await _context.Gastos.FindAsync(dto.Id)
@@ -196,6 +225,19 @@ namespace Syspharma.Data.Repositories
             await _context.SaveChangesAsync();
 
             await RecalcularTotalGastosTurno(turnoId);
+=======
+        public async Task<GastoDto> Actualizar(GastoUpdateDto dto) { return null; }
+        public async Task<bool> Eliminar(int id) { return true; }
+
+        public async Task<bool> Anular(int id, string? motivo)
+        {
+            var gasto = await _context.Gastos.FindAsync(id);
+            if (gasto == null) return false;
+            gasto.Anulado = true;
+            gasto.FechaAnulacion = DateTime.Now;
+            gasto.MotivoAnulacion = motivo;
+            await _context.SaveChangesAsync();
+>>>>>>> Stashed changes
             return true;
         }
     }

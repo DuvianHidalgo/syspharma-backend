@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Syspharma.Data.Context;
 using Syspharma.Data.Entities;
 using Syspharma.Domain.DTOs;
@@ -17,6 +17,7 @@ namespace Syspharma.Data.Repositories
         Task<ProductoDto> Actualizar(ProductoUpdateDto dto);
         Task<bool> CambiarEstado(int id, bool estado);
         Task<bool> Eliminar(int id);
+        Task<List<ProductoDto>> ProximosAVencer(int dias);
     }
 
     public class ProductoRepository : IProductoRepository
@@ -45,6 +46,7 @@ namespace Syspharma.Data.Repositories
             Estado = p.Estado,
             FechaCreacion = p.FechaCreacion,
             UltimaActualizacion = p.UltimaActualizacion,
+<<<<<<< Updated upstream
 
             // --- NUEVO MAPEO DEL MEDICAMENTO ---
             Medicamento = p.ProductoMedicamento != null ? new ProductoMedicamentoDto
@@ -58,6 +60,9 @@ namespace Syspharma.Data.Repositories
                 RegistroSanitario = p.ProductoMedicamento.RegistroSanitario,
                 RequiereFormula = p.ProductoMedicamento.RequiereFormula
             } : null
+=======
+            FechaVencimientoProxima = p.FechaVencimientoProxima
+>>>>>>> Stashed changes
         };
 
         public async Task<List<ProductoDto>> ObtenerTodos()
@@ -83,6 +88,7 @@ namespace Syspharma.Data.Repositories
                     Estado = p.Estado,
                     FechaCreacion = p.FechaCreacion,
                     UltimaActualizacion = p.UltimaActualizacion,
+<<<<<<< Updated upstream
 
                     // --- NUEVO: Proyección del medicamento en la lista ---
                     Medicamento = p.ProductoMedicamento != null ? new ProductoMedicamentoDto
@@ -96,6 +102,9 @@ namespace Syspharma.Data.Repositories
                         RegistroSanitario = p.ProductoMedicamento.RegistroSanitario,
                         RequiereFormula = p.ProductoMedicamento.RequiereFormula
                     } : null
+=======
+                    FechaVencimientoProxima = p.FechaVencimientoProxima
+>>>>>>> Stashed changes
                 })
                 .ToListAsync();
         }
@@ -109,6 +118,38 @@ namespace Syspharma.Data.Repositories
                 .FirstOrDefaultAsync(p => p.Id == id);
 
             return p == null ? null : MapToDto(p);
+        }
+
+        public async Task<List<ProductoDto>> ProximosAVencer(int dias)
+        {
+            var limite = DateTime.Today.AddDays(dias);
+            return await _context.Productos
+                .Include(p => p.Categoria)
+                .Include(p => p.Proveedor)
+                .Where(p => p.FechaVencimientoProxima != null
+                         && p.FechaVencimientoProxima <= limite
+                         && p.Estado == true)
+                .OrderBy(p => p.FechaVencimientoProxima)
+                .Select(p => new ProductoDto
+                {
+                    Id = p.Id,
+                    Nombre = p.Nombre,
+                    Descripcion = p.Descripcion,
+                    CategoriaId = p.CategoriaId,
+                    CategoriaNombre = p.Categoria.Nombre,
+                    ProveedorId = p.ProveedorId,
+                    ProveedorNombre = p.Proveedor != null ? p.Proveedor.Nombre : null,
+                    Precio = p.Precio,
+                    PrecioCompra = p.PrecioCompra,
+                    Stock = p.Stock,
+                    CodigoBarras = p.CodigoBarras,
+                    Imagen = p.Imagen,
+                    Estado = p.Estado,
+                    FechaCreacion = p.FechaCreacion,
+                    UltimaActualizacion = p.UltimaActualizacion,
+                    FechaVencimientoProxima = p.FechaVencimientoProxima
+                })
+                .ToListAsync();
         }
 
         public async Task<ProductoDto> Crear(ProductoCreateDto dto)

@@ -1,5 +1,8 @@
+<<<<<<< Updated upstream
 ﻿using System;
 
+=======
+>>>>>>> Stashed changes
 namespace Syspharma.Domain.DTOs
 {
     public class CompraDetalleDto
@@ -11,9 +14,12 @@ namespace Syspharma.Domain.DTOs
         public decimal PrecioUnitario { get; set; }
         public decimal Subtotal { get; set; }
         public string? Lote { get; set; }
+<<<<<<< Updated upstream
         public DateOnly? FechaVencimiento { get; set; }
+=======
+        public DateTime? FechaVencimiento { get; set; }
+>>>>>>> Stashed changes
     }
-
     public class CompraDto
     {
         public int Id { get; set; }
@@ -33,27 +39,28 @@ namespace Syspharma.Domain.DTOs
         public DateTime? FechaEntrega { get; set; }
         public List<CompraDetalleDto> Detalles { get; set; } = new();
     }
-
     public class CompraDetalleCreateDto
     {
         public int ProductoId { get; set; }
         public int Cantidad { get; set; }
         public decimal PrecioUnitario { get; set; }
         public string? Lote { get; set; }
+<<<<<<< Updated upstream
         public DateOnly? FechaVencimiento { get; set; }
+=======
+        public DateTime? FechaVencimiento { get; set; }
+>>>>>>> Stashed changes
     }
-
     public class CompraCreateDto
     {
         public int ProveedorId { get; set; }
         public int UsuarioId { get; set; }
-        public decimal PorcentajeIva { get; set; } = 19;
+        public decimal? PorcentajeIva { get; set; } = 19;
         public string? Notas { get; set; }
         public string? Observaciones { get; set; }
         public DateTime? FechaEntrega { get; set; }
         public List<CompraDetalleCreateDto> Detalles { get; set; } = new();
     }
-
     public class CompraUpdateDto
     {
         public int Id { get; set; }

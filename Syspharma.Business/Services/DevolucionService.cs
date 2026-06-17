@@ -1,7 +1,11 @@
+<<<<<<< Updated upstream
 ﻿using AutoMapper;
 using Microsoft.EntityFrameworkCore;
 using Syspharma.Data.Context;
 using Syspharma.Data.Entities;
+=======
+using Syspharma.Data.Repositories;
+>>>>>>> Stashed changes
 using Syspharma.Domain.DTOs;
 
 namespace Syspharma.Business.Services
@@ -10,14 +14,21 @@ namespace Syspharma.Business.Services
     {
         Task<List<DevolucionDto>> ObtenerTodos();
         Task<DevolucionDto?> ObtenerPorId(int id);
+<<<<<<< Updated upstream
         Task<VentaDto?> ObtenerVentaParaDevolucion(int ventaId);
         Task<DevolucionDto> Crear(DevolucionCreateDto dto);
         Task<bool> Gestionar(int id, DevolucionGestionarDto dto);
+=======
+        Task<DevolucionDto?> ObtenerPorVentaId(int ventaId);
+        Task<DevolucionDto> Crear(DevolucionCreateDto dto);
+        Task<DevolucionDto> Gestionar(int id, DevolucionGestionarDto dto);
+>>>>>>> Stashed changes
         Task<List<EstadoDevolucionDto>> ObtenerEstados();
     }
 
     public class DevolucionService : IDevolucionService
     {
+<<<<<<< Updated upstream
         private readonly SyspharmaContext _context;
         private readonly IMapper _mapper;
 
@@ -296,3 +307,16 @@ namespace Syspharma.Business.Services
         };
     }
 }
+=======
+        private readonly IDevolucionRepository _repo;
+        public DevolucionService(IDevolucionRepository repo) => _repo = repo;
+
+        public Task<List<DevolucionDto>> ObtenerTodos() => _repo.ObtenerTodos();
+        public Task<DevolucionDto?> ObtenerPorId(int id) => _repo.ObtenerPorId(id);
+        public Task<DevolucionDto?> ObtenerPorVentaId(int ventaId) => _repo.ObtenerPorVentaId(ventaId);
+        public Task<DevolucionDto> Crear(DevolucionCreateDto dto) => _repo.Crear(dto);
+        public Task<DevolucionDto> Gestionar(int id, DevolucionGestionarDto dto) => _repo.Gestionar(id, dto);
+        public Task<List<EstadoDevolucionDto>> ObtenerEstados() => _repo.ObtenerEstados();
+    }
+}
+>>>>>>> Stashed changes

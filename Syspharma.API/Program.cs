@@ -119,6 +119,10 @@ builder.Services.AddScoped<IServicioRepository, ServicioRepository>();
 builder.Services.AddScoped<ICitaRepository, CitaRepository>();
 builder.Services.AddScoped<ITurnoRepository, TurnoRepository>();
 builder.Services.AddScoped<IGastoRepository, GastoRepository>();
+<<<<<<< Updated upstream
+=======
+builder.Services.AddScoped<IDisponibilidadRepository, DisponibilidadRepository>();
+>>>>>>> Stashed changes
 builder.Services.AddScoped<IDevolucionRepository, DevolucionRepository>();
 
 // 10. Servicios
@@ -136,6 +140,10 @@ builder.Services.AddScoped<IServicioService, ServicioService>();
 builder.Services.AddScoped<ICitaService, CitaService>();
 builder.Services.AddScoped<ITurnoService, TurnoService>();
 builder.Services.AddScoped<IGastoService, GastoService>();
+<<<<<<< Updated upstream
+=======
+builder.Services.AddScoped<IDisponibilidadService, DisponibilidadService>();
+>>>>>>> Stashed changes
 builder.Services.AddScoped<IDevolucionService, DevolucionService>();
 
 // 11. Otros

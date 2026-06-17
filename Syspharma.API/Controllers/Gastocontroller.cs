@@ -1,9 +1,8 @@
-﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Syspharma.Business.Services;
 using Syspharma.Domain.DTOs;
-
 namespace Syspharma.API.Controllers
 {
     [ApiController]
@@ -13,19 +12,23 @@ namespace Syspharma.API.Controllers
     {
         private readonly IGastoService _service;
         public GastoController(IGastoService service) => _service = service;
-
         [HttpGet]
         public async Task<IActionResult> ObtenerTodos() => Ok(await _service.ObtenerTodos());
-
+        [HttpGet("today")]
+        public async Task<IActionResult> ObtenerHoy([FromQuery] int? usuarioId)
+        {
+            var gastos = await _service.ObtenerHoy(usuarioId);
+            return Ok(new { data = gastos });
+        }
         [HttpGet("{id}")]
         public async Task<IActionResult> ObtenerPorId(int id)
         {
             var g = await _service.ObtenerPorId(id);
             return g == null ? NotFound(new { message = "Gasto no encontrado" }) : Ok(g);
         }
-
         [HttpGet("turno/{turnoId}")]
         public async Task<IActionResult> ObtenerPorTurno(int turnoId) =>
+<<<<<<< Updated upstream
             Ok(await _service.ObtenerPorTurno(turnoId));
 
         // NUEVO: Gastos de hoy
@@ -58,6 +61,9 @@ namespace Syspharma.API.Controllers
             }
         }
 
+=======
+            Ok(new { data = await _service.ObtenerPorTurno(turnoId) });
+>>>>>>> Stashed changes
         [HttpPost]
         public async Task<IActionResult> Crear([FromBody] GastoCreateDto dto)
         {
@@ -72,13 +78,13 @@ namespace Syspharma.API.Controllers
                 return BadRequest(new { message = errorReal });
             }
         }
-
         [HttpPut]
         public async Task<IActionResult> Actualizar([FromBody] GastoUpdateDto dto)
         {
             try { return Ok(await _service.Actualizar(dto)); }
             catch (Exception ex) { return BadRequest(new { message = ex.Message }); }
         }
+<<<<<<< Updated upstream
 
         // NUEVO: Anular
         [HttpPut("{id}/anular")]
@@ -95,6 +101,18 @@ namespace Syspharma.API.Controllers
             }
         }
 
+=======
+        [HttpPut("{id}/anular")]
+        public async Task<IActionResult> Anular(int id, [FromBody] string? motivo)
+        {
+            try
+            {
+                var ok = await _service.Anular(id, motivo);
+                return ok ? Ok(new { message = "Gasto anulado correctamente" }) : NotFound(new { message = "Gasto no encontrado" });
+            }
+            catch (Exception ex) { return BadRequest(new { message = ex.Message }); }
+        }
+>>>>>>> Stashed changes
         [HttpDelete("{id}")]
         public async Task<IActionResult> Eliminar(int id)
         {

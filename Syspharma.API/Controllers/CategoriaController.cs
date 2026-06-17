@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Syspharma.Business.Services;
@@ -25,6 +25,7 @@ namespace Syspharma.API.Controllers
             return Ok(result);
         }
 
+<<<<<<< Updated upstream
         // GET /api/Categoria/todas — activas + inactivas (para la página de gestión de categorías)
         [HttpGet("todas")]
         public async Task<IActionResult> ObtenerTodosConInactivos()
@@ -34,6 +35,16 @@ namespace Syspharma.API.Controllers
         }
 
         [HttpGet("{id:int}")]
+=======
+        [HttpGet("todas")]
+        public async Task<IActionResult> ObtenerTodas()
+        {
+            var result = await _service.ObtenerTodos();
+            return Ok(result);
+        }
+
+        [HttpGet("{id}")]
+>>>>>>> Stashed changes
         public async Task<IActionResult> ObtenerPorId(int id)
         {
             var result = await _service.ObtenerPorId(id);

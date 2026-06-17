@@ -1,8 +1,5 @@
-<<<<<<< Updated upstream
 ﻿using System;
 
-=======
->>>>>>> Stashed changes
 namespace Syspharma.Domain.DTOs
 {
     public class CompraDetalleDto
@@ -14,11 +11,7 @@ namespace Syspharma.Domain.DTOs
         public decimal PrecioUnitario { get; set; }
         public decimal Subtotal { get; set; }
         public string? Lote { get; set; }
-<<<<<<< Updated upstream
         public DateOnly? FechaVencimiento { get; set; }
-=======
-        public DateTime? FechaVencimiento { get; set; }
->>>>>>> Stashed changes
     }
     public class CompraDto
     {
@@ -45,11 +38,7 @@ namespace Syspharma.Domain.DTOs
         public int Cantidad { get; set; }
         public decimal PrecioUnitario { get; set; }
         public string? Lote { get; set; }
-<<<<<<< Updated upstream
         public DateOnly? FechaVencimiento { get; set; }
-=======
-        public DateTime? FechaVencimiento { get; set; }
->>>>>>> Stashed changes
     }
     public class CompraCreateDto
     {

@@ -19,13 +19,9 @@ namespace Syspharma.Domain.DTOs
         public bool Estado { get; set; }
         public DateTime? FechaCreacion { get; set; }
         public DateTime? UltimaActualizacion { get; set; }
-<<<<<<< Updated upstream
 
         // --- NUEVAS PROPIEDADES DE MEDICAMENTO ---
         public ProductoMedicamentoDto? Medicamento { get; set; }
-=======
-        public DateTime? FechaVencimientoProxima { get; set; }
->>>>>>> Stashed changes
     }
 
     public class ProductoCreateDto

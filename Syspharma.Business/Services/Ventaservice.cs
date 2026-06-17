@@ -16,6 +16,7 @@ namespace Syspharma.Business.Services
         Task<List<EstadoVentaDto>> ObtenerEstados();
         Task<bool> CambiarEstado(int id, int estadoId);
         Task<bool> Anular(int id);
+        Task<VentaDto> CrearDesdePedido(int pedidoId);
     }
 
     public class VentaService : IVentaService

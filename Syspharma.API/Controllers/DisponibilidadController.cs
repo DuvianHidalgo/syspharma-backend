@@ -19,7 +19,7 @@ namespace Syspharma.API.Controllers
             Ok(await _service.ObtenerHorario(medicoId));
 
         [HttpPost("horario")]
-        public async Task<IActionResult> GuardarHorario([FromBody] GuardarHorarioDto dto)
+        public async Task<IActionResult> GuardarHorario([FromBody] GuardarHorarioItemDto dto)
         {
             try
             {

@@ -52,6 +52,9 @@ public partial class SyspharmaContext : IdentityDbContext<Usuario, IdentityRole<
     public virtual DbSet<Devolucion> Devoluciones { get; set; }
     public virtual DbSet<DetalleDevolucion> DetallesDevoluciones { get; set; }
 
+    // ✅ Nuevo DbSet para configuraciones
+    public virtual DbSet<Configuracion> Configuraciones { get; set; }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -143,6 +146,8 @@ public partial class SyspharmaContext : IdentityDbContext<Usuario, IdentityRole<
             entity.Property(e => e.PrecioUnitario).HasColumnType("decimal(12, 2)").HasColumnName("precioUnitario");
             entity.Property(e => e.ProductoId).HasColumnName("productoId");
             entity.Property(e => e.Subtotal).HasColumnType("decimal(12, 2)").HasColumnName("subtotal");
+            entity.Property(e => e.Lote).HasMaxLength(100).HasColumnName("lote");
+            entity.Property(e => e.FechaVencimiento).HasColumnName("fechaVencimiento");
             entity.HasOne(d => d.Compra).WithMany(p => p.CompraDetalles).HasForeignKey(d => d.CompraId).OnDelete(DeleteBehavior.ClientSetNull).HasConstraintName("FK_CompraDetalles_Compras");
             entity.HasOne(d => d.Producto).WithMany(p => p.CompraDetalles).HasForeignKey(d => d.ProductoId).OnDelete(DeleteBehavior.ClientSetNull).HasConstraintName("FK_CompraDetalles_Productos");
         });
@@ -339,6 +344,7 @@ public partial class SyspharmaContext : IdentityDbContext<Usuario, IdentityRole<
             entity.Property(e => e.ProveedorId).HasColumnName("proveedorId");
             entity.Property(e => e.Stock).HasColumnName("stock");
             entity.Property(e => e.UltimaActualizacion).HasDefaultValueSql("(getdate())").HasColumnType("datetime").HasColumnName("ultimaActualizacion");
+            entity.Property(e => e.FechaVencimientoProxima).HasColumnName("fechaVencimientoProxima");
             entity.HasOne(d => d.Categoria).WithMany(p => p.Productos).HasForeignKey(d => d.CategoriaId).OnDelete(DeleteBehavior.ClientSetNull).HasConstraintName("FK_Productos_Categorias");
             entity.HasOne(d => d.Proveedor).WithMany(p => p.Productos).HasForeignKey(d => d.ProveedorId).OnDelete(DeleteBehavior.SetNull).HasConstraintName("FK_Productos_Proveedores");
         });
@@ -661,6 +667,22 @@ public partial class SyspharmaContext : IdentityDbContext<Usuario, IdentityRole<
                 .HasForeignKey(d => d.DetalleVentaId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_DetDev_DetalleVenta");
+        });
+
+        // ✅ Mapeo de Configuracion
+        modelBuilder.Entity<Configuracion>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.ToTable("configuracion");
+            entity.HasIndex(e => e.Clave).IsUnique();
+            entity.Property(e => e.Id).HasColumnName("id");
+            entity.Property(e => e.Clave).HasMaxLength(100).HasColumnName("clave");
+            entity.Property(e => e.Valor).HasMaxLength(500).HasColumnName("valor");
+            entity.Property(e => e.Descripcion).HasMaxLength(300).HasColumnName("descripcion");
+            entity.Property(e => e.FechaActualizacion)
+                .HasDefaultValueSql("(getdate())")
+                .HasColumnType("datetime")
+                .HasColumnName("fechaActualizacion");
         });
 
         OnModelCreatingPartial(modelBuilder);

@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Identity;
+﻿using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -6,6 +7,7 @@ using Syspharma.Business.Services;
 using Syspharma.Data.Context;
 using Syspharma.Data.Entities;
 using Syspharma.Domain.DTOs;
+using System.IO;
 
 namespace Syspharma.API.Controllers
 {
@@ -100,6 +102,53 @@ namespace Syspharma.API.Controllers
             {
                 var usuario = await _service.Actualizar(dto);
                 return Ok(usuario);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        [HttpPost("{id}/foto")]
+        [Consumes("multipart/form-data")]
+        public async Task<IActionResult> SubirFoto(int id, IFormFile foto)
+        {
+            try
+            {
+                var usuario = await _context.Usuarios.FindAsync(id);
+                if (usuario == null) return NotFound(new { message = "Usuario no encontrado" });
+
+                if (foto == null || foto.Length == 0)
+                    return BadRequest(new { message = "No se envió ninguna imagen" });
+
+                var extensionesPermitidas = new[] { ".jpg", ".jpeg", ".png", ".webp" };
+                var extension = Path.GetExtension(foto.FileName).ToLower();
+                if (!extensionesPermitidas.Contains(extension))
+                    return BadRequest(new { message = "Solo se permiten JPG, PNG o WEBP" });
+
+                // Eliminar foto anterior
+                if (!string.IsNullOrEmpty(usuario.Avatar))
+                {
+                    var fotoAnterior = Path.Combine(
+                        Directory.GetCurrentDirectory(), "wwwroot",
+                        usuario.Avatar.TrimStart('/'));
+                    if (System.IO.File.Exists(fotoAnterior))
+                        System.IO.File.Delete(fotoAnterior);
+                }
+
+                var carpeta = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "fotos-perfil");
+                Directory.CreateDirectory(carpeta);
+
+                var nombreArchivo = $"user_{id}_{DateTime.Now.Ticks}{extension}";
+                var rutaCompleta = Path.Combine(carpeta, nombreArchivo);
+
+                using (var stream = new FileStream(rutaCompleta, FileMode.Create))
+                    await foto.CopyToAsync(stream);
+
+                usuario.Avatar = $"/fotos-perfil/{nombreArchivo}";
+                await _context.SaveChangesAsync();
+
+                return Ok(new { avatar = usuario.Avatar });
             }
             catch (Exception ex)
             {

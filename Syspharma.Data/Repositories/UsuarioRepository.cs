@@ -13,6 +13,7 @@ namespace Syspharma.Data.Repositories
         Task<UsuarioDto> Actualizar(UsuarioUpdateDto dto);
         Task<UsuarioDto> CambiarEstado(int id, bool estado); // <-- añadido
         Task<bool> Eliminar(int id);
+        Task<UsuarioDto> ActualizarAvatar(int id, string avatar); // <-- nuevo
     }
 
     public class UsuarioRepository : IUsuarioRepository
@@ -105,6 +106,7 @@ namespace Syspharma.Data.Repositories
             usuario.Telefono = dto.Telefono;
             usuario.RoleId = dto.RolId;
             usuario.Estado = dto.Estado;
+            usuario.Avatar = dto.Avatar ?? usuario.Avatar; // ← línea añadida
 
             await _context.SaveChangesAsync();
             return MapDto(usuario);
@@ -134,6 +136,21 @@ namespace Syspharma.Data.Repositories
             _context.Usuarios.Remove(usuario);
             await _context.SaveChangesAsync();
             return true;
+        }
+
+        public async Task<UsuarioDto> ActualizarAvatar(int id, string avatar)
+        {
+            var usuario = await _context.Usuarios
+                .Include(u => u.Role)
+                .Include(u => u.TipoDocumento)
+                .FirstOrDefaultAsync(u => u.Id == id);
+            if (usuario == null)
+                throw new Exception("Usuario no encontrado");
+
+            usuario.Avatar = avatar;
+            await _context.SaveChangesAsync();
+
+            return MapDto(usuario);
         }
     }
 }

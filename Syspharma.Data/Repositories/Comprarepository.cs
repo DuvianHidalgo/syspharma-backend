@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using System;
+using Microsoft.EntityFrameworkCore;
 using Syspharma.Data.Context;
 using Syspharma.Data.Entities;
 using Syspharma.Domain.DTOs;
@@ -45,7 +46,9 @@ namespace Syspharma.Data.Repositories
                 ProductoNombre = d.Producto?.Nombre ?? "",
                 Cantidad = d.Cantidad,
                 PrecioUnitario = d.PrecioUnitario,
-                Subtotal = d.Subtotal
+                Subtotal = d.Subtotal,
+                Lote = d.Lote,
+                FechaVencimiento = d.FechaVencimiento
             }).ToList()
         };
 
@@ -77,6 +80,12 @@ namespace Syspharma.Data.Repositories
 
         public async Task<CompraDto> Crear(CompraCreateDto dto)
         {
+            // ✅ LOG TEMPORAL
+            foreach (var d in dto.Detalles)
+            {
+                Console.WriteLine($">>> Producto: {d.ProductoId} | Lote: {d.Lote} | FechaVenc: {d.FechaVencimiento}");
+            }
+
             var estado = await _context.EstadosCompras
                 .FirstOrDefaultAsync(e => e.Nombre.ToLower() == "pendiente")
                 ?? throw new Exception("Estado 'Pendiente' no encontrado");
@@ -99,28 +108,85 @@ namespace Syspharma.Data.Repositories
                 Observaciones = dto.Observaciones,
                 FechaCompra = DateTime.Now,
                 FechaEntrega = dto.FechaEntrega,
-                // FIX: guardar los detalles correctamente
+                // FIX: guardar los detalles correctamente (incluye lote y fecha de vencimiento)
                 CompraDetalles = dto.Detalles.Select(d => new CompraDetalle
                 {
                     ProductoId = d.ProductoId,
                     Cantidad = d.Cantidad,
                     PrecioUnitario = d.PrecioUnitario,
                     Subtotal = d.Cantidad * d.PrecioUnitario,
+                    Lote = d.Lote,
+                    FechaVencimiento = d.FechaVencimiento
                 }).ToList()
             };
+
+            // ✅ NUEVO: actualizar stock de cada producto
+            foreach (var detalle in dto.Detalles)
+            {
+                var producto = await _context.Productos.FindAsync(detalle.ProductoId)
+                    ?? throw new Exception($"Producto con ID {detalle.ProductoId} no encontrado");
+
+                producto.Stock += detalle.Cantidad;
+            }
+
+            // ✅ Actualizar FechaVencimientoProxima del producto
+            foreach (var detalle in dto.Detalles)
+            {
+                if (detalle.FechaVencimiento == null) continue;
+                var producto = await _context.Productos.FindAsync(detalle.ProductoId);
+                if (producto == null) continue;
+                if (producto.FechaVencimientoProxima == null ||
+                    detalle.FechaVencimiento < producto.FechaVencimientoProxima)
+                {
+                    producto.FechaVencimientoProxima = detalle.FechaVencimiento;
+                }
+            }
 
             _context.Compras.Add(compra);
             await _context.SaveChangesAsync();
             return await ObtenerPorId(compra.Id) ?? MapDto(compra);
         }
 
-        // FIX: implementar Actualizar de verdad
         public async Task<CompraDto> Actualizar(CompraUpdateDto dto)
         {
             var compra = await _context.Compras
                 .Include(c => c.CompraDetalles)
                 .FirstOrDefaultAsync(c => c.Id == dto.Id)
                 ?? throw new Exception("Compra no encontrada");
+
+            // ✅ PASO 1: Revertir el stock de los detalles VIEJOS
+            foreach (var detalleViejo in compra.CompraDetalles)
+            {
+                var producto = await _context.Productos.FindAsync(detalleViejo.ProductoId)
+                    ?? throw new Exception($"Producto con ID {detalleViejo.ProductoId} no encontrado");
+
+                producto.Stock -= detalleViejo.Cantidad;
+
+                // Evitar stock negativo por seguridad
+                if (producto.Stock < 0) producto.Stock = 0;
+            }
+
+            // ✅ PASO 2: Sumar el stock de los detalles NUEVOS
+            foreach (var detalleNuevo in dto.Detalles)
+            {
+                var producto = await _context.Productos.FindAsync(detalleNuevo.ProductoId)
+                    ?? throw new Exception($"Producto con ID {detalleNuevo.ProductoId} no encontrado");
+
+                producto.Stock += detalleNuevo.Cantidad;
+            }
+
+            // ✅ Actualizar FechaVencimientoProxima del producto (para detalles nuevos)
+            foreach (var detalle in dto.Detalles)
+            {
+                if (detalle.FechaVencimiento == null) continue;
+                var producto = await _context.Productos.FindAsync(detalle.ProductoId);
+                if (producto == null) continue;
+                if (producto.FechaVencimientoProxima == null ||
+                    detalle.FechaVencimiento < producto.FechaVencimientoProxima)
+                {
+                    producto.FechaVencimientoProxima = detalle.FechaVencimiento;
+                }
+            }
 
             // Actualizar campos de cabecera
             compra.ProveedorId = dto.ProveedorId;
@@ -129,7 +195,7 @@ namespace Syspharma.Data.Repositories
             compra.Observaciones = dto.Observaciones;
             compra.FechaEntrega = dto.FechaEntrega;
 
-            // Reemplazar detalles: eliminar los viejos y agregar los nuevos
+            // Reemplazar detalles
             _context.CompraDetalles.RemoveRange(compra.CompraDetalles);
 
             var nuevosDetalles = dto.Detalles.Select(d => new CompraDetalle
@@ -139,12 +205,15 @@ namespace Syspharma.Data.Repositories
                 Cantidad = d.Cantidad,
                 PrecioUnitario = d.PrecioUnitario,
                 Subtotal = d.Cantidad * d.PrecioUnitario,
+                Lote = d.Lote,
+                FechaVencimiento = d.FechaVencimiento
             }).ToList();
 
             compra.CompraDetalles = nuevosDetalles;
 
             // Recalcular totales
             compra.Subtotal = nuevosDetalles.Sum(d => d.Subtotal);
+            compra.Iva = compra.Subtotal * (dto.PorcentajeIva / 100m);
             compra.Total = compra.Subtotal + compra.Iva;
 
             await _context.SaveChangesAsync();

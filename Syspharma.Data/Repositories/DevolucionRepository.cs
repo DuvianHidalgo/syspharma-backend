@@ -43,7 +43,7 @@ namespace Syspharma.Data.Repositories
                 ProductoNombre = det.Producto?.Nombre,
                 CantidadDevuelta = det.CantidadDevuelta,
                 PrecioUnitario = det.PrecioUnitario,
-                SubtotalDevuelto = det.SubtotalDevuelto
+                SubtotalDevuelto = det.SubtotalDevuelto ?? 0
             }).ToList()
         };
 

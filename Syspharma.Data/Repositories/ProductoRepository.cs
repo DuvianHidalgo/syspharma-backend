@@ -90,7 +90,7 @@ namespace Syspharma.Data.Repositories
 
         public async Task<List<ProductoDto>> ProximosAVencer(int dias)
         {
-            var limite = DateTime.Today.AddDays(dias);
+            var limite = DateOnly.FromDateTime(DateTime.Today.AddDays(dias));
             return await _context.Productos
                 .Include(p => p.Categoria)
                 .Include(p => p.Proveedor)

@@ -19,6 +19,7 @@ namespace Syspharma.Domain.DTOs
         public bool Estado { get; set; }
         public DateTime? FechaCreacion { get; set; }
         public DateTime? UltimaActualizacion { get; set; }
+        public DateOnly? FechaVencimientoProxima { get; set; }
 
         // --- NUEVAS PROPIEDADES DE MEDICAMENTO ---
         public ProductoMedicamentoDto? Medicamento { get; set; }

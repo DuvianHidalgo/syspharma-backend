@@ -31,6 +31,9 @@ namespace Syspharma.Domain.DTOs
         public string? Hora { get; set; }
         public DateTime? Fecha { get; set; }
         public string? Observaciones { get; set; }
+        public bool? Anulado { get; set; }
+        public DateTime? FechaAnulacion { get; set; }
+        public string? MotivoAnulacion { get; set; }
     }
 
     public class GastoCreateDto

@@ -39,5 +39,13 @@ namespace Syspharma.API.Controllers
             var res = await _service.CambiarEstado(id, estadoId);
             return res ? Ok(new { message = "Estado actualizado" }) : NotFound();
         }
+
+
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> Eliminar(int id)
+        {
+            var res = await _service.Eliminar(id);
+            return res ? Ok(new { message = "Cita eliminada correctamente" }) : NotFound();
+        }
     }
 }

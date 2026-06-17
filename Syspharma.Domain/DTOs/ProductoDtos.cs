@@ -1,4 +1,6 @@
-﻿namespace Syspharma.Domain.DTOs
+﻿using System;
+
+namespace Syspharma.Domain.DTOs
 {
     public class ProductoDto
     {
@@ -17,6 +19,9 @@
         public bool Estado { get; set; }
         public DateTime? FechaCreacion { get; set; }
         public DateTime? UltimaActualizacion { get; set; }
+
+        // --- NUEVAS PROPIEDADES DE MEDICAMENTO ---
+        public ProductoMedicamentoDto? Medicamento { get; set; }
     }
 
     public class ProductoCreateDto
@@ -30,6 +35,10 @@
         public int? Stock { get; set; }
         public string? CodigoBarras { get; set; }
         public string? Imagen { get; set; }
+
+        // --- NUEVAS PROPIEDADES DE MEDICAMENTO ---
+        public bool EsMedicamento { get; set; } = false;
+        public ProductoMedicamentoDto? Medicamento { get; set; }
     }
 
     public class ProductoUpdateDto
@@ -44,5 +53,9 @@
         public int? Stock { get; set; }
         public string? CodigoBarras { get; set; }
         public string? Imagen { get; set; }
+
+        // --- NUEVAS PROPIEDADES DE MEDICAMENTO ---
+        public bool EsMedicamento { get; set; } = false;
+        public ProductoMedicamentoDto? Medicamento { get; set; }
     }
 }

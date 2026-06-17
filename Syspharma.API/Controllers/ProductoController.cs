@@ -1,8 +1,12 @@
-﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
+﻿using System;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Syspharma.Business.Services;
+using Syspharma.Data.Context;
 using Syspharma.Domain.DTOs;
+
 namespace Syspharma.API.Controllers
 {
     [ApiController]
@@ -11,9 +15,12 @@ namespace Syspharma.API.Controllers
     public class ProductoController : ControllerBase
     {
         private readonly IProductoService _service;
-        public ProductoController(IProductoService service)
+        private readonly SyspharmaContext _context;
+
+        public ProductoController(IProductoService service, SyspharmaContext context)
         {
             _service = service;
+            _context = context;
         }
 
         [HttpGet]
@@ -23,7 +30,7 @@ namespace Syspharma.API.Controllers
             return Ok(result);
         }
 
-        [HttpGet("{id}")]
+        [HttpGet("{id:int}")]
         public async Task<IActionResult> ObtenerPorId(int id)
         {
             var result = await _service.ObtenerPorId(id);
@@ -36,6 +43,7 @@ namespace Syspharma.API.Controllers
         {
             try
             {
+                // El DTO recibido ya contiene opcionalmente las propiedades 'EsMedicamento' y 'Medicamento'
                 var result = await _service.Crear(dto);
                 return Ok(result);
             }
@@ -50,6 +58,7 @@ namespace Syspharma.API.Controllers
         {
             try
             {
+                // Permite actualizar los datos básicos y los detalles de medicamento en una sola llamada
                 var result = await _service.Actualizar(dto);
                 return Ok(result);
             }
@@ -84,6 +93,43 @@ namespace Syspharma.API.Controllers
             catch (Exception ex)
             {
                 return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        [HttpGet("proximos-a-vencer")]
+        [AllowAnonymous]
+        public async Task<IActionResult> ProximosAVencer()
+        {
+            try
+            {
+                var config = await _context.Configuraciones
+                    .FirstOrDefaultAsync(c => c.Clave == "dias_alerta_vencimiento");
+                var dias = int.TryParse(config?.Valor, out var d) ? d : 30;
+
+                var hoy = DateTime.Today;
+                var limite = hoy.AddDays(dias);
+
+                var productos = await _context.Productos
+                    .Where(p => p.Estado &&
+                                p.FechaVencimientoProxima != null &&
+                                p.FechaVencimientoProxima.Value.ToDateTime(TimeOnly.MinValue) <= limite &&
+                                p.FechaVencimientoProxima.Value.ToDateTime(TimeOnly.MinValue) >= hoy)
+                    .Select(p => new
+                    {
+                        p.Id,
+                        p.Nombre,
+                        p.Stock,
+                        FechaVencimiento = p.FechaVencimientoProxima,
+                        DiasRestantes = EF.Functions.DateDiffDay(hoy, p.FechaVencimientoProxima!.Value.ToDateTime(TimeOnly.MinValue))
+                    })
+                    .OrderBy(p => p.FechaVencimiento)
+                    .ToListAsync();
+
+                return Ok(productos);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = ex.Message, detail = ex.InnerException?.Message });
             }
         }
     }

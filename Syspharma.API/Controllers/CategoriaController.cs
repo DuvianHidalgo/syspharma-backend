@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Syspharma.Business.Services;
 using Syspharma.Domain.DTOs;
+
 namespace Syspharma.API.Controllers
 {
     [ApiController]
@@ -16,6 +17,7 @@ namespace Syspharma.API.Controllers
             _service = service;
         }
 
+        // GET /api/Categoria — solo activas (para dropdowns de productos, compras, etc.)
         [HttpGet]
         public async Task<IActionResult> ObtenerTodos()
         {
@@ -23,7 +25,15 @@ namespace Syspharma.API.Controllers
             return Ok(result);
         }
 
-        [HttpGet("{id}")]
+        // GET /api/Categoria/todas — activas + inactivas (para la página de gestión de categorías)
+        [HttpGet("todas")]
+        public async Task<IActionResult> ObtenerTodosConInactivos()
+        {
+            var result = await _service.ObtenerTodosConInactivos();
+            return Ok(result);
+        }
+
+        [HttpGet("{id:int}")]
         public async Task<IActionResult> ObtenerPorId(int id)
         {
             var result = await _service.ObtenerPorId(id);

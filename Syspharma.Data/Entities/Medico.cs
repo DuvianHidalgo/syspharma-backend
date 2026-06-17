@@ -30,4 +30,9 @@ public partial class Medico
     public DateTime? FechaCreacion { get; set; }
 
     public virtual ICollection<Cita> Cita { get; set; } = new List<Cita>();
+
+    public virtual ICollection<MedicoHorario> Horarios { get; set; } = new List<MedicoHorario>();
+
+    public virtual ICollection<MedicoDiaNoDisponible> DiasNoDisponibles { get; set; } = new List<MedicoDiaNoDisponible>();
+
 }

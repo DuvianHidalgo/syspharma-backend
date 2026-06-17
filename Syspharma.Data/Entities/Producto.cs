@@ -31,6 +31,8 @@ public partial class Producto
 
     public DateTime? UltimaActualizacion { get; set; }
 
+    public DateOnly? FechaVencimientoProxima { get; set; }
+
     public virtual Categoria Categoria { get; set; } = null!;
 
     public virtual ICollection<CompraDetalle> CompraDetalles { get; set; } = new List<CompraDetalle>();
@@ -40,4 +42,7 @@ public partial class Producto
     public virtual Proveedore? Proveedor { get; set; }
 
     public virtual ICollection<VentaDetalle> VentaDetalles { get; set; } = new List<VentaDetalle>();
+
+    // --- NUEVA RELACIÓN HACIA MEDICAMENTO ---
+    public virtual ProductoMedicamento? ProductoMedicamento { get; set; }
 }

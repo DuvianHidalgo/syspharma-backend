@@ -19,6 +19,8 @@ public partial class Pedido
 
     public string? ClienteEmail { get; set; }
 
+    public string? Direccion { get; set; }
+
     public int? MetodoPagoId { get; set; }
 
     public int EstadoId { get; set; }

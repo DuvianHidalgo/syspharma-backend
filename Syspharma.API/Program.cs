@@ -13,6 +13,8 @@ using Syspharma.Business.Services;
 using Syspharma.Data.Context;
 using Syspharma.Data.Entities;
 using Syspharma.Data.Repositories;
+using Microsoft.Extensions.FileProviders;
+using System.IO;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -104,9 +106,11 @@ builder.Services.AddSwaggerGen(c =>
 builder.Services.AddScoped<IUsuarioRepository, UsuarioRepository>();
 builder.Services.AddScoped<IRolMaestroRepository, RolMaestroRepository>();
 builder.Services.AddScoped<ICategoriaRepository, CategoriaRepository>();
-builder.Services.AddScoped<IProductoRepository, ProductoRepository>();
+builder.Services.AddScoped<IProductoRepository, ProductoRepository>(); // Ya registrado
 builder.Services.AddScoped<IProveedorRepository, ProveedorRepository>();
 builder.Services.AddScoped<IMedicoRepository, MedicoRepository>();
+builder.Services.AddScoped<IDisponibilidadRepository, DisponibilidadRepository>();
+builder.Services.AddScoped<IDisponibilidadService, DisponibilidadService>();
 builder.Services.AddScoped<IPermisoRepository, PermisoRepository>();
 builder.Services.AddScoped<ICompraRepository, CompraRepository>();
 builder.Services.AddScoped<IVentaRepository, VentaRepository>();
@@ -115,12 +119,13 @@ builder.Services.AddScoped<IServicioRepository, ServicioRepository>();
 builder.Services.AddScoped<ICitaRepository, CitaRepository>();
 builder.Services.AddScoped<ITurnoRepository, TurnoRepository>();
 builder.Services.AddScoped<IGastoRepository, GastoRepository>();
+builder.Services.AddScoped<IDevolucionRepository, DevolucionRepository>();
 
 // 10. Servicios
 builder.Services.AddScoped<IUsuarioService, UsuarioService>();
 builder.Services.AddScoped<IRolMaestroService, RolMaestroService>();
 builder.Services.AddScoped<ICategoriaService, CategoriaService>();
-builder.Services.AddScoped<IProductoService, ProductoService>();
+builder.Services.AddScoped<IProductoService, ProductoService>(); // Ya registrado
 builder.Services.AddScoped<IProveedorService, ProveedorService>();
 builder.Services.AddScoped<IMedicoService, MedicoService>();
 builder.Services.AddScoped<IPermisoService, PermisoService>();
@@ -131,6 +136,7 @@ builder.Services.AddScoped<IServicioService, ServicioService>();
 builder.Services.AddScoped<ICitaService, CitaService>();
 builder.Services.AddScoped<ITurnoService, TurnoService>();
 builder.Services.AddScoped<IGastoService, GastoService>();
+builder.Services.AddScoped<IDevolucionService, DevolucionService>();
 
 // 11. Otros
 builder.Services.AddMemoryCache();
@@ -139,6 +145,15 @@ builder.Services.AddTransient<IEmailSender, SmtpEmailSender>();
 var app = builder.Build();
 
 app.UseRouting();
+
+// Forzar ruta correcta de wwwroot para servir archivos estáticos
+var wwwrootPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new PhysicalFileProvider(wwwrootPath),
+    RequestPath = ""
+});
+
 app.UseHttpsRedirection();
 app.UseCors("AllowFront");
 
@@ -155,5 +170,11 @@ if (app.Environment.IsDevelopment())
 }
 
 app.MapControllers();
+
+// Debug temporal: comprobar que el servicio quedó registrado (elimina este bloque después de probar)
+var helperProvider = builder.Services.BuildServiceProvider();
+var svcCheck = helperProvider.GetService<Syspharma.Business.Services.IDevolucionService>();
+if (svcCheck == null) Console.WriteLine("DEBUG: IDevolucionService NO está registrado.");
+else Console.WriteLine("DEBUG: IDevolucionService registrado correctamente.");
 
 app.Run();

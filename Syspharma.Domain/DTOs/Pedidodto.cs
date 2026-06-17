@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace Syspharma.Domain.DTOs
@@ -23,6 +23,7 @@ namespace Syspharma.Domain.DTOs
         public string? ClienteDocumento { get; set; }
         public string? ClienteTelefono { get; set; }
         public string? ClienteEmail { get; set; }
+        public string? Direccion { get; set; }
         public int? MetodoPagoId { get; set; }
         public string? MetodoPagoNombre { get; set; }
         public int EstadoId { get; set; }
@@ -52,12 +53,14 @@ namespace Syspharma.Domain.DTOs
         public string? ClienteDocumento { get; set; }
         public string? ClienteTelefono { get; set; }
         public string? ClienteEmail { get; set; }
+        public string? Direccion { get; set; }
         public int? MetodoPagoId { get; set; } // Opcional para evitar error 400
         public decimal PorcentajeIva { get; set; } = 0;
         public string? Notas { get; set; }
         public string? Origen { get; set; } = "web";
         public DateTime? FechaEntrega { get; set; }
         public List<PedidoDetalleCreateDto> Detalles { get; set; } = new();
+        public List<int>? CitaIds { get; set; } = new();
     }
 
     public class PedidoUpdateDto

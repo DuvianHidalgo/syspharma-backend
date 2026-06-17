@@ -3,34 +3,21 @@ using System.Collections.Generic;
 
 namespace Syspharma.Domain.DTOs
 {
-    public class RolDto
+    public class RolMaestroDto
     {
         public int Id { get; set; }
         public string Nombre { get; set; } = null!;
         public string? Descripcion { get; set; }
-        public bool Estado { get; set; }
+        public bool Estado { get; set; } = true;
         public DateTime? FechaCreacion { get; set; }
-        // Lista de códigos de permisos asociados (ej: "users.view", "billing.create")
         public List<string> Permisos { get; set; } = new();
     }
 
-    public class RolCreateDto
+    public class RolMaestroEstadoDto
     {
-        public string Nombre { get; set; } = null!;
-        public string? Descripcion { get; set; }
-        // Se pueden enviar los códigos de permisos directamente al crear
-        public List<string>? Permisos { get; set; }
+        public bool Estado { get; set; }
     }
 
-    public class RolUpdateDto
-    {
-        public int Id { get; set; }
-        public string Nombre { get; set; } = null!;
-        public string? Descripcion { get; set; }
-        public List<string>? Permisos { get; set; }
-    }
-
-    // Útil para poblar los checkboxes en el frontend
     public class PermisoListaDto
     {
         public int Id { get; set; }

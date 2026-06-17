@@ -23,6 +23,8 @@ namespace Syspharma.Business.Services
         {
             _repository = repository;
         }
+
+        // Delegación directa al repositorio unificado
         public Task<List<ProductoDto>> ObtenerTodos() => _repository.ObtenerTodos();
         public Task<ProductoDto?> ObtenerPorId(int id) => _repository.ObtenerPorId(id);
         public Task<ProductoDto> Crear(ProductoCreateDto dto) => _repository.Crear(dto);

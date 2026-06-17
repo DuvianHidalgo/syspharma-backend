@@ -5,13 +5,13 @@ using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
-using System.Text.Json.Serialization;
 using Microsoft.Extensions.Caching.Memory;
 using System.Security.Cryptography;
 using Microsoft.AspNetCore.Identity;
 using Syspharma.Data.Context;
 using Syspharma.Data.Entities;
 using Syspharma.API.Services;
+using Syspharma.Domain.DTOs;
 
 namespace Syspharma.API.Controllers
 {
@@ -32,7 +32,6 @@ namespace Syspharma.API.Controllers
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginDto dto)
         {
-            // ✅ CORRECCIÓN: ThenInclude para cargar los permisos del rol
             var usuario = await _context.Usuarios
                 .Include(u => u.Role)
                     .ThenInclude(r => r.RolesPermisos)
@@ -46,7 +45,6 @@ namespace Syspharma.API.Controllers
             if (!passwordValido)
                 return Unauthorized(new { message = "Credenciales incorrectas" });
 
-            // ✅ Ahora los permisos vienen del Include, sin segunda consulta
             var permisos = usuario.Role?.RolesPermisos
                 .Select(rp => rp.Permiso.Codigo)
                 .ToList() ?? new List<string>();
@@ -67,6 +65,10 @@ namespace Syspharma.API.Controllers
                     rolId = usuario.RoleId,
                     usuario.Avatar,
                     usuario.Estado,
+                    usuario.Documento,
+                    usuario.Telefono,
+                    usuario.Direccion,
+                    usuario.TipoDocumentoId,
                     permisos
                 }
             });
@@ -109,7 +111,89 @@ namespace Syspharma.API.Controllers
             if (!resultado.Succeeded)
                 return BadRequest(resultado.Errors);
 
+            // ── Correo de bienvenida ──────────────────────────────────────
+            var frontendUrl = _config["EmailSettings:FrontendUrl"] ?? "http://localhost:5173";
+            try
+            {
+                // Caso A: cliente se registra solo (no trae contraseña temporal)
+                if (string.IsNullOrEmpty(dto.PasswordTemporal))
+                {
+                    var htmlBienvenida = EmailTemplates.Bienvenida(usuario.Nombre, usuario.Email!, frontendUrl);
+                    await _emailSender.SendEmailAsync(usuario.Email!, "¡Bienvenido a SysPharma! 🎉", htmlBienvenida);
+                }
+                // Caso B: admin crea usuario con contraseña temporal
+                else
+                {
+                    var htmlCredenciales = EmailTemplates.BienvenidaConCredenciales(usuario.Nombre, usuario.Email!, dto.PasswordTemporal, frontendUrl);
+                    await _emailSender.SendEmailAsync(usuario.Email!, "Tu cuenta en SysPharma está lista 🎉", htmlCredenciales);
+                }
+            }
+            catch (Exception ex)
+            {
+                // No bloqueamos el registro si el correo falla — solo lo logueamos
+                _logger.LogWarning(ex, "No se pudo enviar correo de bienvenida a {Email}", usuario.Email);
+            }
+
             return Ok(new { message = "Usuario registrado correctamente" });
+        }
+
+        [HttpPut("{id:int}")]
+        public async Task<IActionResult> UpdateProfile(int id, [FromBody] Syspharma.Domain.DTOs.UsuarioUpdateDto dto)
+        {
+            ModelState.Remove("RoId");
+            ModelState.Remove("RolId");
+            ModelState.Remove("Estado");
+
+            if (!ModelState.IsValid)
+                return BadRequest(new { message = "Datos inválidos en el formulario", errors = ModelState });
+
+            if (id != dto.Id)
+                return BadRequest(new { message = "El ID del usuario no coincide con la URL" });
+
+            var usuario = await _userManager.FindByIdAsync(id.ToString());
+            if (usuario == null)
+                return NotFound(new { message = "Usuario no encontrado" });
+
+            if (usuario.Email != dto.Email)
+            {
+                var emailExiste = await _context.Usuarios.AnyAsync(u => u.Email == dto.Email && u.Id != id);
+                if (emailExiste)
+                    return BadRequest(new { message = "El correo electrónico ya está en uso por otro usuario" });
+
+                usuario.Email = dto.Email;
+                usuario.UserName = dto.Email;
+            }
+
+            if (!string.IsNullOrEmpty(dto.Documento))
+            {
+                var documentoExiste = await _context.Usuarios.AnyAsync(u => u.Documento == dto.Documento && u.Id != id);
+                if (documentoExiste)
+                    return BadRequest(new { message = "El documento ya se encuentra registrado" });
+            }
+
+            usuario.Nombre = $"{dto.Nombre} {dto.Apellidos}".Trim();
+            usuario.TipoDocumentoId = dto.TipoDocumentoId;
+            usuario.Documento = string.IsNullOrEmpty(dto.Documento) ? null : dto.Documento;
+            usuario.Telefono = string.IsNullOrEmpty(dto.Telefono) ? null : dto.Telefono;
+            usuario.Direccion = string.IsNullOrEmpty(dto.Direccion) ? null : dto.Direccion;
+
+            var resultadoUpdate = await _userManager.UpdateAsync(usuario);
+            if (!resultadoUpdate.Succeeded)
+                return BadRequest(new { message = "Error al actualizar el perfil", errors = resultadoUpdate.Errors });
+
+            return Ok(new
+            {
+                message = "Perfil actualizado correctamente",
+                user = new
+                {
+                    id = usuario.Id,
+                    usuario.Nombre,
+                    usuario.Email,
+                    usuario.TipoDocumentoId,
+                    usuario.Documento,
+                    usuario.Telefono
+                }
+            });
         }
 
         [HttpPost("forgot-password")]
@@ -125,20 +209,12 @@ namespace Syspharma.API.Controllers
             var code = RandomNumberGenerator.GetInt32(100000, 1000000).ToString();
             _cache.Set($"recovery_{dto.Email}", code, TimeSpan.FromMinutes(15));
 
-            var mensajeHtml = $@"
-                <div style='font-family: Arial, sans-serif; padding: 20px; border: 1px solid #e0e0e0; border-radius: 10px;'>
-                    <h2 style='color: #059669;'>Recuperación de Contraseña</h2>
-                    <p>Hola, <strong>{userEntity.Nombre}</strong>.</p>
-                    <p>Has solicitado restablecer tu contraseña. Usa el siguiente código en la aplicación:</p>
-                    <div style='background-color: #f3f4f6; padding: 15px; font-size: 24px; font-weight: bold; text-align: center; letter-spacing: 5px; border-radius: 5px;'>
-                        {code}
-                    </div>
-                    <p style='font-size: 12px; color: #6b7280; margin-top: 20px;'>Válido por 15 minutos. Si no fuiste tú, ignora este mensaje.</p>
-                </div>";
+            // ── Template mejorado de recuperación ──────────────────────────
+            var htmlRecuperacion = EmailTemplates.RecuperacionContrasena(userEntity.Nombre ?? "Usuario", code);
 
             try
             {
-                await _emailSender.SendEmailAsync(userEntity.Email!, "Tu Código de Recuperación", mensajeHtml);
+                await _emailSender.SendEmailAsync(userEntity.Email!, "Código de recuperación — SysPharma", htmlRecuperacion);
                 return Ok(new { message = "Código enviado correctamente." });
             }
             catch (Exception ex)
@@ -195,7 +271,6 @@ namespace Syspharma.API.Controllers
 
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(keyStr));
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-
             var expires = DateTime.Now.AddMinutes(Convert.ToDouble(_config["Jwt:ExpiresInMinutes"] ?? "60"));
 
             var token = new JwtSecurityToken(
@@ -225,6 +300,8 @@ namespace Syspharma.API.Controllers
         public string? Documento { get; set; }
         public int? TipoDocumentoId { get; set; }
         public string? Telefono { get; set; }
+        // Opcional — solo se envía cuando el admin crea el usuario
+        public string? PasswordTemporal { get; set; }
     }
 
     public class ForgotPasswordDto { public string Email { get; set; } = null!; }

@@ -14,6 +14,8 @@ public partial class Usuario : IdentityUser<int>
 
     public string? Telefono { get; set; }
 
+    public string? Direccion { get; set; }
+
     public int RoleId { get; set; }
 
     public string? Avatar { get; set; }
@@ -39,4 +41,6 @@ public partial class Usuario : IdentityUser<int>
     public virtual ICollection<Turno> Turnos { get; set; } = new List<Turno>();
 
     public virtual ICollection<Venta> Venta { get; set; } = new List<Venta>();
+
+
 }

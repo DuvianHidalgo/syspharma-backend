@@ -49,9 +49,7 @@ public partial class SyspharmaContext : IdentityDbContext<Usuario, IdentityRole<
     public virtual DbSet<Venta> Ventas { get; set; }
     public virtual DbSet<VentaDetalle> VentaDetalles { get; set; }
     // Nueva DbSet agregada
-    public virtual DbSet<Devolucion> Devoluciones { get; set; }
     public virtual DbSet<DetalleDevolucion> DetallesDevolucion { get; set; }
-    public virtual DbSet<EstadoDevolucion> EstadosDevoluciones { get; set; }
     public virtual DbSet<VentaDetalleServicio> VentaDetalleServicios { get; set; }
 
     public virtual DbSet<EstadoDevolucion> EstadosDevoluciones { get; set; }

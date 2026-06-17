@@ -30,7 +30,6 @@ public partial class Producto
     public DateTime? FechaCreacion { get; set; }
 
     public DateTime? UltimaActualizacion { get; set; }
-    public DateTime? FechaVencimientoProxima { get; set; }
 
     public DateOnly? FechaVencimientoProxima { get; set; }
 

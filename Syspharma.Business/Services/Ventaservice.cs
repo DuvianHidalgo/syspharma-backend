@@ -297,49 +297,6 @@ namespace Syspharma.Business.Services
             return await ObtenerPorId(venta.Id) ?? _mapper.Map<VentaDto>(venta);
         }
 
-        public async Task<bool> Anular(int id)
-        {
-            using var transaction = await _context.Database.BeginTransactionAsync();
-            try
-            {
-                var venta = await _context.Ventas
-                    .Include(v => v.VentaDetalles)
-                    .FirstOrDefaultAsync(v => v.Id == id);
-                if (venta == null) return false;
-
-                // Revertir stock
-                foreach (var d in venta.VentaDetalles)
-                {
-                    var producto = await _context.Productos.FindAsync(d.ProductoId);
-                    if (producto != null)
-                    {
-                        producto.Stock += d.Cantidad;
-                        producto.UltimaActualizacion = DateTime.Now;
-                    }
-                }
-
-                // Revertir turno
-                if (venta.TurnoId > 0)
-                {
-                    var turno = await _context.Turnos.FindAsync(venta.TurnoId);
-                    if (turno != null)
-                    {
-                        turno.TotalVentas -= venta.Total;
-                        turno.ResumenVentas -= 1;
-                    }
-                }
-
-                venta.EstadoId = 3; // anulada
-                await _context.SaveChangesAsync();
-                await transaction.CommitAsync();
-                return true;
-            }
-            catch
-            {
-                await transaction.RollbackAsync();
-                throw;
-            }
-        }
 
         public async Task<bool> Eliminar(int id)
         {

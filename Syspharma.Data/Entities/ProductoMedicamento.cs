@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace Syspharma.Data.Entities;
@@ -12,8 +12,6 @@ public partial class ProductoMedicamento
     public string? Composicion { get; set; }
 
     public string? Concentracion { get; set; }
-
-    public string? Presentacion { get; set; }
 
     public string? ViaAdministracion { get; set; }
 

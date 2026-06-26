@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace Syspharma.Data.Entities;
@@ -18,6 +18,10 @@ public partial class VentaDetalle
     public decimal Descuento { get; set; }
 
     public decimal Subtotal { get; set; }
+
+    public int? LoteId { get; set; }
+
+    public virtual Lote? Lote { get; set; }
 
     public virtual Producto Producto { get; set; } = null!;
 

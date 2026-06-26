@@ -83,6 +83,24 @@ namespace Syspharma.Data.Repositories
                 .FirstOrDefaultAsync(e => e.Nombre.ToLower() == "pendiente")
                 ?? throw new Exception("Estado 'pendiente' no encontrado");
 
+            // Validaciones de medicamentos
+            foreach (var det in dto.Detalles)
+            {
+                var prod = await _context.Productos
+                    .Include(p => p.ProductoMedicamento)
+                    .FirstOrDefaultAsync(p => p.Id == det.ProductoId);
+
+                if (prod != null && prod.ProductoMedicamento != null)
+                {
+                    if (string.IsNullOrWhiteSpace(det.Lote))
+                        throw new Exception($"El lote es obligatorio para el medicamento '{prod.Nombre}'.");
+                    if (!det.FechaVencimiento.HasValue)
+                        throw new Exception($"La fecha de vencimiento es obligatoria para el medicamento '{prod.Nombre}'.");
+                    if (det.FechaVencimiento.Value <= DateOnly.FromDateTime(DateTime.Today))
+                        throw new Exception($"La fecha de vencimiento para '{prod.Nombre}' debe ser una fecha futura.");
+                }
+            }
+
             var subtotal = dto.Detalles.Sum(d => d.Cantidad * d.PrecioUnitario);
             var porcentajeIva = dto.PorcentajeIva ?? 0;
             var iva = Math.Round(subtotal * porcentajeIva / 100, 2);
@@ -106,7 +124,9 @@ namespace Syspharma.Data.Repositories
                     ProductoId = d.ProductoId,
                     Cantidad = d.Cantidad,
                     PrecioUnitario = d.PrecioUnitario,
-                    Subtotal = Math.Round(d.Cantidad * d.PrecioUnitario, 2)
+                    Subtotal = Math.Round(d.Cantidad * d.PrecioUnitario, 2),
+                    Lote = d.Lote,
+                    FechaVencimiento = d.FechaVencimiento
                 }).ToList()
             };
 
@@ -121,6 +141,24 @@ namespace Syspharma.Data.Repositories
                 .Include(c => c.CompraDetalles)
                 .FirstOrDefaultAsync(c => c.Id == dto.Id)
                 ?? throw new Exception("Compra no encontrada");
+
+            // Validaciones de medicamentos
+            foreach (var det in dto.Detalles)
+            {
+                var prod = await _context.Productos
+                    .Include(p => p.ProductoMedicamento)
+                    .FirstOrDefaultAsync(p => p.Id == det.ProductoId);
+
+                if (prod != null && prod.ProductoMedicamento != null)
+                {
+                    if (string.IsNullOrWhiteSpace(det.Lote))
+                        throw new Exception($"El lote es obligatorio para el medicamento '{prod.Nombre}'.");
+                    if (!det.FechaVencimiento.HasValue)
+                        throw new Exception($"La fecha de vencimiento es obligatoria para el medicamento '{prod.Nombre}'.");
+                    if (det.FechaVencimiento.Value <= DateOnly.FromDateTime(DateTime.Today))
+                        throw new Exception($"La fecha de vencimiento para '{prod.Nombre}' debe ser una fecha futura.");
+                }
+            }
 
             compra.ProveedorId = dto.ProveedorId;
             compra.EstadoId = dto.EstadoId;
@@ -142,7 +180,9 @@ namespace Syspharma.Data.Repositories
                 ProductoId = d.ProductoId,
                 Cantidad = d.Cantidad,
                 PrecioUnitario = d.PrecioUnitario,
-                Subtotal = Math.Round(d.Cantidad * d.PrecioUnitario, 2)
+                Subtotal = Math.Round(d.Cantidad * d.PrecioUnitario, 2),
+                Lote = d.Lote,
+                FechaVencimiento = d.FechaVencimiento
             }).ToList();
 
             await _context.SaveChangesAsync();
@@ -151,9 +191,44 @@ namespace Syspharma.Data.Repositories
 
         public async Task<bool> CambiarEstado(int id, int estadoId)
         {
-            var c = await _context.Compras.FindAsync(id);
+            var c = await _context.Compras
+                .Include(x => x.CompraDetalles)
+                .FirstOrDefaultAsync(x => x.Id == id);
+
             if (c == null) return false;
+
             c.EstadoId = estadoId;
+
+            var estadoRecibida = await _context.EstadosCompras.FirstOrDefaultAsync(e => e.Nombre.ToLower() == "recibida");
+            if (estadoRecibida != null && estadoId == estadoRecibida.Id)
+            {
+                // Crear lotes si no han sido creados previamente
+                if (!await _context.Lotes.AnyAsync(l => l.CompraId == id))
+                {
+                    foreach (var det in c.CompraDetalles)
+                    {
+                        var lote = new Lote
+                        {
+                            ProductoId = det.ProductoId,
+                            CompraId = c.Id,
+                            NumeroLote = det.Lote ?? $"LOTE-{c.NumeroCompra}-{det.ProductoId}",
+                            Cantidad = det.Cantidad,
+                            FechaVencimiento = det.FechaVencimiento ?? DateOnly.FromDateTime(DateTime.Today.AddYears(1)),
+                            CostoUnitario = det.PrecioUnitario,
+                            FechaCreacion = DateTime.Now
+                        };
+                        _context.Lotes.Add(lote);
+
+                        // Incrementar el stock global del producto
+                        var prod = await _context.Productos.FindAsync(det.ProductoId);
+                        if (prod != null)
+                        {
+                            prod.Stock += det.Cantidad;
+                        }
+                    }
+                }
+            }
+
             await _context.SaveChangesAsync();
             return true;
         }

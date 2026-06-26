@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace Syspharma.Data.Entities;
@@ -18,6 +18,10 @@ public partial class Producto
     public decimal Precio { get; set; }
 
     public decimal? PrecioCompra { get; set; }
+
+    public string? Marca { get; set; }
+
+    public string? Presentacion { get; set; }
 
     public int Stock { get; set; }
 
@@ -45,4 +49,6 @@ public partial class Producto
 
     // --- NUEVA RELACIÓN HACIA MEDICAMENTO ---
     public virtual ProductoMedicamento? ProductoMedicamento { get; set; }
+
+    public virtual ICollection<Lote> Lotes { get; set; } = new List<Lote>();
 }

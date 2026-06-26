@@ -52,7 +52,8 @@ namespace Syspharma.Data.Repositories
                 ProductoNombre = d.Producto?.Nombre ?? "Producto",
                 Cantidad = d.Cantidad,
                 PrecioUnitario = d.PrecioUnitario,
-                Subtotal = d.Subtotal
+                Subtotal = d.Subtotal,
+                LoteId = d.LoteId
             }).ToList() ?? new List<VentaDetalleDto>(),
             Servicios = v.VentaDetallesServicios?.Select(s => new VentaDetalleServicioDto
             {
@@ -123,14 +124,51 @@ namespace Syspharma.Data.Repositories
                 {
                     foreach (var d in dto.Detalles)
                     {
+                        int? assignedLoteId = d.LoteId;
+
+                        if (assignedLoteId.HasValue)
+                        {
+                            var lote = await _context.Lotes.FindAsync(assignedLoteId.Value);
+                            if (lote != null)
+                            {
+                                lote.Cantidad -= d.Cantidad;
+                            }
+                        }
+                        else
+                        {
+                            // Fallback FEFO automático si el producto tiene lotes activos
+                            var activeLotes = await _context.Lotes
+                                .Where(l => l.ProductoId == d.ProductoId && l.FechaVencimiento >= DateOnly.FromDateTime(DateTime.Today) && l.Cantidad > 0)
+                                .OrderBy(l => l.FechaVencimiento)
+                                .ToListAsync();
+
+                            if (activeLotes.Any())
+                            {
+                                int pendingToDiscount = d.Cantidad;
+                                foreach (var lote in activeLotes)
+                                {
+                                    if (pendingToDiscount <= 0) break;
+                                    int toDiscount = Math.Min(lote.Cantidad, pendingToDiscount);
+                                    lote.Cantidad -= toDiscount;
+                                    pendingToDiscount -= toDiscount;
+                                    if (!assignedLoteId.HasValue)
+                                    {
+                                        assignedLoteId = lote.Id; // Asociar al menos el primer lote modificado
+                                    }
+                                }
+                            }
+                        }
+
                         _context.VentaDetalles.Add(new VentaDetalle
                         {
                             VentaId = venta.Id,
                             ProductoId = d.ProductoId,
                             Cantidad = d.Cantidad,
                             PrecioUnitario = d.PrecioUnitario,
-                            Subtotal = d.Cantidad * d.PrecioUnitario
+                            Subtotal = d.Cantidad * d.PrecioUnitario,
+                            LoteId = assignedLoteId
                         });
+
                         var p = await _context.Productos.FindAsync(d.ProductoId);
                         if (p != null) p.Stock -= d.Cantidad;
                     }
@@ -221,6 +259,14 @@ namespace Syspharma.Data.Repositories
                 // Revertir stock
                 foreach (var d in venta.VentaDetalles)
                 {
+                    if (d.LoteId.HasValue)
+                    {
+                        var lote = await _context.Lotes.FindAsync(d.LoteId.Value);
+                        if (lote != null)
+                        {
+                            lote.Cantidad += d.Cantidad;
+                        }
+                    }
                     var p = await _context.Productos.FindAsync(d.ProductoId);
                     if (p != null) p.Stock += d.Cantidad;
                 }

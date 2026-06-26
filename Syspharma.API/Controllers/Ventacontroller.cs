@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Syspharma.Business.Services;
@@ -21,18 +21,18 @@ namespace Syspharma.API.Controllers
             return Ok(ventas);
         }
 
-        [HttpGet("{id}")]
-        public async Task<IActionResult> ObtenerPorId(int id)
-        {
-            var venta = await _service.ObtenerPorId(id);
-            return venta == null ? NotFound(new { message = "Venta no encontrada" }) : Ok(venta);
-        }
-
         [HttpGet("estados")]
         public async Task<IActionResult> ObtenerEstados()
         {
             var estados = await _service.ObtenerEstados();
             return Ok(estados);
+        }
+
+        [HttpGet("{id}")]
+        public async Task<IActionResult> ObtenerPorId(int id)
+        {
+            var venta = await _service.ObtenerPorId(id);
+            return venta == null ? NotFound(new { message = "Venta no encontrada" }) : Ok(venta);
         }
 
         [HttpPost]
@@ -73,7 +73,8 @@ namespace Syspharma.API.Controllers
         {
             try
             {
-                await _service.Anular(id);
+                var result = await _service.Anular(id);
+                if (!result) return NotFound(new { message = "Venta no encontrada" });
                 return Ok(new { message = "Venta anulada correctamente" });
             }
             catch (Exception ex) { return BadRequest(new { message = ex.Message }); }

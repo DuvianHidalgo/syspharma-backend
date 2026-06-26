@@ -1,11 +1,10 @@
-﻿using Syspharma.Data.Repositories;
+using Syspharma.Data.Repositories;
 using Syspharma.Domain.DTOs;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace Syspharma.Business.Services
 {
-    // INTERFAZ INCLUIDA
     public interface IProductoService
     {
         Task<List<ProductoDto>> ObtenerTodos();
@@ -14,6 +13,7 @@ namespace Syspharma.Business.Services
         Task<ProductoDto> Actualizar(ProductoUpdateDto dto);
         Task<bool> CambiarEstado(int id, bool estado);
         Task<bool> Eliminar(int id);
+        Task<List<ProductoDto>> ProximosAVencer(int dias);
     }
 
     public class ProductoService : IProductoService
@@ -31,5 +31,6 @@ namespace Syspharma.Business.Services
         public Task<ProductoDto> Actualizar(ProductoUpdateDto dto) => _repository.Actualizar(dto);
         public Task<bool> CambiarEstado(int id, bool estado) => _repository.CambiarEstado(id, estado);
         public Task<bool> Eliminar(int id) => _repository.Eliminar(id);
+        public Task<List<ProductoDto>> ProximosAVencer(int dias) => _repository.ProximosAVencer(dias);
     }
 }

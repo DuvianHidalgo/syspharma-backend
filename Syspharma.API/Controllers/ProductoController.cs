@@ -1,4 +1,3 @@
-﻿using System;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -30,7 +29,14 @@ namespace Syspharma.API.Controllers
             return Ok(result);
         }
 
-        [HttpGet("{id:int}")]
+        [HttpGet("proximos-a-vencer")]
+        public async Task<IActionResult> ProximosAVencer([FromQuery] int dias = 30)
+        {
+            var result = await _service.ProximosAVencer(dias);
+            return Ok(result);
+        }
+
+        [HttpGet("{id}")]
         public async Task<IActionResult> ObtenerPorId(int id)
         {
             var result = await _service.ObtenerPorId(id);

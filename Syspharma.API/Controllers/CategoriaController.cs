@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Syspharma.Business.Services;
@@ -25,15 +25,14 @@ namespace Syspharma.API.Controllers
             return Ok(result);
         }
 
-        // GET /api/Categoria/todas — activas + inactivas (para la página de gestión de categorías)
         [HttpGet("todas")]
-        public async Task<IActionResult> ObtenerTodosConInactivos()
+        public async Task<IActionResult> ObtenerTodas()
         {
-            var result = await _service.ObtenerTodosConInactivos();
+            var result = await _service.ObtenerTodos();
             return Ok(result);
         }
 
-        [HttpGet("{id:int}")]
+        [HttpGet("{id}")]
         public async Task<IActionResult> ObtenerPorId(int id)
         {
             var result = await _service.ObtenerPorId(id);

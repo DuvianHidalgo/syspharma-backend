@@ -19,6 +19,7 @@ namespace Syspharma.API.Controllers
         public async Task<IActionResult> ObtenerTodos() => Ok(await _service.ObtenerTodos());
 
         [HttpGet("{id}")]
+        [AllowAnonymous]
         public async Task<IActionResult> ObtenerPorId(int id)
         {
             var s = await _service.ObtenerPorId(id);

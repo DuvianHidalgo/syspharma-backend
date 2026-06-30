@@ -1,4 +1,3 @@
-﻿using System;
 using Microsoft.EntityFrameworkCore;
 using Syspharma.Data.Context;
 using Syspharma.Data.Entities;
@@ -80,19 +79,31 @@ namespace Syspharma.Data.Repositories
 
         public async Task<CompraDto> Crear(CompraCreateDto dto)
         {
-            // ✅ LOG TEMPORAL
-            foreach (var d in dto.Detalles)
-            {
-                Console.WriteLine($">>> Producto: {d.ProductoId} | Lote: {d.Lote} | FechaVenc: {d.FechaVencimiento}");
-            }
-
             var estado = await _context.EstadosCompras
                 .FirstOrDefaultAsync(e => e.Nombre.ToLower() == "pendiente")
-                ?? throw new Exception("Estado 'Pendiente' no encontrado");
+                ?? throw new Exception("Estado 'pendiente' no encontrado");
 
-            // Calcular totales
+            // Validaciones de medicamentos
+            foreach (var det in dto.Detalles)
+            {
+                var prod = await _context.Productos
+                    .Include(p => p.ProductoMedicamento)
+                    .FirstOrDefaultAsync(p => p.Id == det.ProductoId);
+
+                if (prod != null && prod.ProductoMedicamento != null)
+                {
+                    if (string.IsNullOrWhiteSpace(det.Lote))
+                        throw new Exception($"El lote es obligatorio para el medicamento '{prod.Nombre}'.");
+                    if (!det.FechaVencimiento.HasValue)
+                        throw new Exception($"La fecha de vencimiento es obligatoria para el medicamento '{prod.Nombre}'.");
+                    if (det.FechaVencimiento.Value <= DateOnly.FromDateTime(DateTime.Today))
+                        throw new Exception($"La fecha de vencimiento para '{prod.Nombre}' debe ser una fecha futura.");
+                }
+            }
+
             var subtotal = dto.Detalles.Sum(d => d.Cantidad * d.PrecioUnitario);
-            var iva = subtotal * (dto.PorcentajeIva / 100m);
+            var porcentajeIva = dto.PorcentajeIva ?? 0;
+            var iva = Math.Round(subtotal * porcentajeIva / 100, 2);
             var total = subtotal + iva;
 
             var compra = new Compra
@@ -108,39 +119,16 @@ namespace Syspharma.Data.Repositories
                 Observaciones = dto.Observaciones,
                 FechaCompra = DateTime.Now,
                 FechaEntrega = dto.FechaEntrega,
-                // FIX: guardar los detalles correctamente (incluye lote y fecha de vencimiento)
                 CompraDetalles = dto.Detalles.Select(d => new CompraDetalle
                 {
                     ProductoId = d.ProductoId,
                     Cantidad = d.Cantidad,
                     PrecioUnitario = d.PrecioUnitario,
-                    Subtotal = d.Cantidad * d.PrecioUnitario,
+                    Subtotal = Math.Round(d.Cantidad * d.PrecioUnitario, 2),
                     Lote = d.Lote,
                     FechaVencimiento = d.FechaVencimiento
                 }).ToList()
             };
-
-            // ✅ NUEVO: actualizar stock de cada producto
-            foreach (var detalle in dto.Detalles)
-            {
-                var producto = await _context.Productos.FindAsync(detalle.ProductoId)
-                    ?? throw new Exception($"Producto con ID {detalle.ProductoId} no encontrado");
-
-                producto.Stock += detalle.Cantidad;
-            }
-
-            // ✅ Actualizar FechaVencimientoProxima del producto
-            foreach (var detalle in dto.Detalles)
-            {
-                if (detalle.FechaVencimiento == null) continue;
-                var producto = await _context.Productos.FindAsync(detalle.ProductoId);
-                if (producto == null) continue;
-                if (producto.FechaVencimientoProxima == null ||
-                    detalle.FechaVencimiento < producto.FechaVencimientoProxima)
-                {
-                    producto.FechaVencimientoProxima = detalle.FechaVencimiento;
-                }
-            }
 
             _context.Compras.Add(compra);
             await _context.SaveChangesAsync();
@@ -154,41 +142,24 @@ namespace Syspharma.Data.Repositories
                 .FirstOrDefaultAsync(c => c.Id == dto.Id)
                 ?? throw new Exception("Compra no encontrada");
 
-            // ✅ PASO 1: Revertir el stock de los detalles VIEJOS
-            foreach (var detalleViejo in compra.CompraDetalles)
+            // Validaciones de medicamentos
+            foreach (var det in dto.Detalles)
             {
-                var producto = await _context.Productos.FindAsync(detalleViejo.ProductoId)
-                    ?? throw new Exception($"Producto con ID {detalleViejo.ProductoId} no encontrado");
+                var prod = await _context.Productos
+                    .Include(p => p.ProductoMedicamento)
+                    .FirstOrDefaultAsync(p => p.Id == det.ProductoId);
 
-                producto.Stock -= detalleViejo.Cantidad;
-
-                // Evitar stock negativo por seguridad
-                if (producto.Stock < 0) producto.Stock = 0;
-            }
-
-            // ✅ PASO 2: Sumar el stock de los detalles NUEVOS
-            foreach (var detalleNuevo in dto.Detalles)
-            {
-                var producto = await _context.Productos.FindAsync(detalleNuevo.ProductoId)
-                    ?? throw new Exception($"Producto con ID {detalleNuevo.ProductoId} no encontrado");
-
-                producto.Stock += detalleNuevo.Cantidad;
-            }
-
-            // ✅ Actualizar FechaVencimientoProxima del producto (para detalles nuevos)
-            foreach (var detalle in dto.Detalles)
-            {
-                if (detalle.FechaVencimiento == null) continue;
-                var producto = await _context.Productos.FindAsync(detalle.ProductoId);
-                if (producto == null) continue;
-                if (producto.FechaVencimientoProxima == null ||
-                    detalle.FechaVencimiento < producto.FechaVencimientoProxima)
+                if (prod != null && prod.ProductoMedicamento != null)
                 {
-                    producto.FechaVencimientoProxima = detalle.FechaVencimiento;
+                    if (string.IsNullOrWhiteSpace(det.Lote))
+                        throw new Exception($"El lote es obligatorio para el medicamento '{prod.Nombre}'.");
+                    if (!det.FechaVencimiento.HasValue)
+                        throw new Exception($"La fecha de vencimiento es obligatoria para el medicamento '{prod.Nombre}'.");
+                    if (det.FechaVencimiento.Value <= DateOnly.FromDateTime(DateTime.Today))
+                        throw new Exception($"La fecha de vencimiento para '{prod.Nombre}' debe ser una fecha futura.");
                 }
             }
 
-            // Actualizar campos de cabecera
             compra.ProveedorId = dto.ProveedorId;
             compra.EstadoId = dto.EstadoId;
             compra.Notas = dto.Notas;
@@ -198,56 +169,84 @@ namespace Syspharma.Data.Repositories
             // Reemplazar detalles
             _context.CompraDetalles.RemoveRange(compra.CompraDetalles);
 
-            var nuevosDetalles = dto.Detalles.Select(d => new CompraDetalle
+            var subtotal = dto.Detalles.Sum(d => d.Cantidad * d.PrecioUnitario);
+            var iva = Math.Round(subtotal * (compra.Iva > 0 ? compra.Iva / compra.Subtotal : 0), 2);
+
+            compra.Subtotal = subtotal;
+            compra.Total = subtotal + iva;
+            compra.CompraDetalles = dto.Detalles.Select(d => new CompraDetalle
             {
                 CompraId = compra.Id,
                 ProductoId = d.ProductoId,
                 Cantidad = d.Cantidad,
                 PrecioUnitario = d.PrecioUnitario,
-                Subtotal = d.Cantidad * d.PrecioUnitario,
+                Subtotal = Math.Round(d.Cantidad * d.PrecioUnitario, 2),
                 Lote = d.Lote,
                 FechaVencimiento = d.FechaVencimiento
             }).ToList();
-
-            compra.CompraDetalles = nuevosDetalles;
-
-            // Recalcular totales
-            compra.Subtotal = nuevosDetalles.Sum(d => d.Subtotal);
-            compra.Iva = compra.Subtotal * (dto.PorcentajeIva / 100m);
-            compra.Total = compra.Subtotal + compra.Iva;
 
             await _context.SaveChangesAsync();
             return await ObtenerPorId(compra.Id) ?? MapDto(compra);
         }
 
-        // FIX: implementar Eliminar de verdad
+        public async Task<bool> CambiarEstado(int id, int estadoId)
+        {
+            var c = await _context.Compras
+                .Include(x => x.CompraDetalles)
+                .FirstOrDefaultAsync(x => x.Id == id);
+
+            if (c == null) return false;
+
+            c.EstadoId = estadoId;
+
+            var estadoRecibida = await _context.EstadosCompras.FirstOrDefaultAsync(e => e.Nombre.ToLower() == "recibida");
+            if (estadoRecibida != null && estadoId == estadoRecibida.Id)
+            {
+                // Crear lotes si no han sido creados previamente
+                if (!await _context.Lotes.AnyAsync(l => l.CompraId == id))
+                {
+                    foreach (var det in c.CompraDetalles)
+                    {
+                        var lote = new Lote
+                        {
+                            ProductoId = det.ProductoId,
+                            CompraId = c.Id,
+                            NumeroLote = det.Lote ?? $"LOTE-{c.NumeroCompra}-{det.ProductoId}",
+                            Cantidad = det.Cantidad,
+                            FechaVencimiento = det.FechaVencimiento ?? DateOnly.FromDateTime(DateTime.Today.AddYears(1)),
+                            CostoUnitario = det.PrecioUnitario,
+                            FechaCreacion = DateTime.Now
+                        };
+                        _context.Lotes.Add(lote);
+
+                        // Incrementar el stock global del producto
+                        var prod = await _context.Productos.FindAsync(det.ProductoId);
+                        if (prod != null)
+                        {
+                            prod.Stock += det.Cantidad;
+                        }
+                    }
+                }
+            }
+
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
         public async Task<bool> Eliminar(int id)
         {
             var compra = await _context.Compras
                 .Include(c => c.CompraDetalles)
                 .FirstOrDefaultAsync(c => c.Id == id);
-
             if (compra == null) return false;
 
-            // Eliminar detalles primero para respetar FK, luego la cabecera
             _context.CompraDetalles.RemoveRange(compra.CompraDetalles);
             _context.Compras.Remove(compra);
             await _context.SaveChangesAsync();
             return true;
         }
 
-        public async Task<bool> CambiarEstado(int id, int estadoId)
-        {
-            var c = await _context.Compras.FindAsync(id);
-            if (c == null) return false;
-            c.EstadoId = estadoId;
-            await _context.SaveChangesAsync();
-            return true;
-        }
-
         public async Task<List<object>> ObtenerEstados() =>
-            await _context.EstadosCompras
-                .Select(e => (object)new { e.Id, e.Nombre })
-                .ToListAsync();
+            await _context.EstadosCompras.Select(e => (object)new { e.Id, e.Nombre }).ToListAsync();
     }
 }

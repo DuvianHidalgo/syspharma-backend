@@ -19,6 +19,7 @@ namespace Syspharma.Domain.DTOs
         public decimal TotalDevolucion { get; set; }
         public DateTime FechaDevolucion { get; set; }
         public DateTime? FechaGestion { get; set; }
+        public int? UsuarioGestionId { get; set; }
         public List<DetalleDevolucionDto> Detalles { get; set; } = new();
     }
 
@@ -60,5 +61,6 @@ namespace Syspharma.Domain.DTOs
     {
         public int Id { get; set; }
         public string Nombre { get; set; } = "";
+        public bool Activo { get; set; }
     }
 }

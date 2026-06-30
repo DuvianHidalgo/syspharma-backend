@@ -1,8 +1,9 @@
-﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Syspharma.Business.Services;
 using Syspharma.Domain.DTOs;
+using Syspharma.API.Filters;
 
 namespace Syspharma.API.Controllers
 {
@@ -15,17 +16,11 @@ namespace Syspharma.API.Controllers
         public VentaController(IVentaService service) => _service = service;
 
         [HttpGet]
+        [RequirePermission("sales.view")]
         public async Task<IActionResult> ObtenerTodos()
         {
             var ventas = await _service.ObtenerTodos();
             return Ok(ventas);
-        }
-
-        [HttpGet("{id}")]
-        public async Task<IActionResult> ObtenerPorId(int id)
-        {
-            var venta = await _service.ObtenerPorId(id);
-            return venta == null ? NotFound(new { message = "Venta no encontrada" }) : Ok(venta);
         }
 
         [HttpGet("estados")]
@@ -35,7 +30,16 @@ namespace Syspharma.API.Controllers
             return Ok(estados);
         }
 
+        [HttpGet("{id}")]
+        [RequirePermission("sales.view")]
+        public async Task<IActionResult> ObtenerPorId(int id)
+        {
+            var venta = await _service.ObtenerPorId(id);
+            return venta == null ? NotFound(new { message = "Venta no encontrada" }) : Ok(venta);
+        }
+
         [HttpPost]
+        [RequirePermission("sales.create")]
         public async Task<IActionResult> Crear([FromBody] VentaCreateDto dto)
         {
             try
@@ -47,6 +51,7 @@ namespace Syspharma.API.Controllers
         }
 
         [HttpPut]
+        [RequirePermission("sales.create")]
         public async Task<IActionResult> Actualizar([FromBody] VentaUpdateDto dto)
         {
             try
@@ -58,6 +63,7 @@ namespace Syspharma.API.Controllers
         }
 
         [HttpPatch("{id}/estado")]
+        [RequirePermission("sales.create")]
         public async Task<IActionResult> CambiarEstado(int id, [FromBody] int estadoId)
         {
             try
@@ -69,17 +75,20 @@ namespace Syspharma.API.Controllers
         }
 
         [HttpPatch("{id}/anular")]
+        [RequirePermission("sales.cancel")]
         public async Task<IActionResult> Anular(int id)
         {
             try
             {
-                await _service.Anular(id);
+                var result = await _service.Anular(id);
+                if (!result) return NotFound(new { message = "Venta no encontrada" });
                 return Ok(new { message = "Venta anulada correctamente" });
             }
             catch (Exception ex) { return BadRequest(new { message = ex.Message }); }
         }
 
         [HttpDelete("{id}")]
+        [RequirePermission("sales.cancel")]
         public async Task<IActionResult> Eliminar(int id)
         {
             try

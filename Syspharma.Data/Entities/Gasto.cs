@@ -1,4 +1,6 @@
-﻿using System;
+using System;
+using System.Collections.Generic;
+
 namespace Syspharma.Data.Entities;
 
 public partial class Gasto
@@ -13,7 +15,12 @@ public partial class Gasto
     public string? Comprobante { get; set; }
     public DateTime? FechaGasto { get; set; }
 
-    // Navegación
+    public bool Anulado { get; set; }
+
+    public DateTime? FechaAnulacion { get; set; }
+
+    public string? MotivoAnulacion { get; set; }
+
     public virtual Turno Turno { get; set; } = null!;
     public virtual Usuario Usuario { get; set; } = null!;
 }

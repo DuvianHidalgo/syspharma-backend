@@ -15,11 +15,8 @@ namespace Syspharma.Business.Services
         Task<bool> Eliminar(int id);
         Task<List<EstadoVentaDto>> ObtenerEstados();
         Task<bool> CambiarEstado(int id, int estadoId);
-
-        Task<VentaDto> CrearDesdePedido(int pedidoId);
-
         Task<bool> Anular(int id);
-
+        Task<VentaDto> CrearDesdePedido(int pedidoId);
     }
 
     public class VentaService : IVentaService
@@ -209,6 +206,8 @@ namespace Syspharma.Business.Services
                 decimal subtotalServ = dto.Servicios?.Sum(s => (s.Cantidad * s.PrecioUnitario) - s.Descuento) ?? 0;
                 decimal subtotalFinal = subtotalProd + subtotalServ;
                 decimal porcentajeIva = dto.PorcentajeIva > 0 ? dto.PorcentajeIva : 0;
+                decimal ivaFinal = Math.Round(subtotalFinal * (porcentajeIva / 100), 2);
+                decimal totalFinal = subtotalFinal + ivaFinal;
 
                 var venta = new Venta
                 {
@@ -225,7 +224,8 @@ namespace Syspharma.Business.Services
                     Notas = dto.Notas,
                     FechaVenta = DateTime.Now,
                     Origen = string.IsNullOrWhiteSpace(dto.Origen) ? "CAJA" : dto.Origen,
-                    PedidoId = dto.PedidoId
+                    PedidoId = dto.PedidoId,
+                    ReferenciasPago = dto.ReferenciasPago
                 };
 
                 // ✔ Usar la propiedad enviada por el cliente para calcular IVA
@@ -248,8 +248,6 @@ namespace Syspharma.Business.Services
                             Descuento = d.Descuento,
                             Subtotal = (d.Cantidad * d.PrecioUnitario) - d.Descuento
                         });
-
-
                         var producto = await _context.Productos.FindAsync(d.ProductoId);
                         if (producto != null)
                         {
@@ -272,34 +270,16 @@ namespace Syspharma.Business.Services
                             Cantidad = s.Cantidad,
                             PrecioUnitario = s.PrecioUnitario,
                             Descuento = s.Descuento,
-                            Subtotal = (s.Cantidad * s.PrecioUnitario) - s.Descuento,
-                            CitaId = s.CitaId
+                            Subtotal = (s.Cantidad * s.PrecioUnitario) - s.Descuento
                         });
-
-                        if (s.CitaId.HasValue && s.CitaId.Value > 0)
-                        {
-                            var cita = await _context.Citas.FindAsync(s.CitaId.Value);
-                            if (cita != null)
-                            {
-                                cita.VentaId = venta.Id;
-                                var estadoPagada = await _context.EstadosCita
-                                    .FirstOrDefaultAsync(e => e.Nombre == "Pagada");
-                                if (estadoPagada != null)
-                                    cita.EstadoId = estadoPagada.Id;
-                            }
-                        }
                     }
                 }
 
-                // Corrección: eliminar uso de variable inexistente 'totalFinal'.
-                // Actualizar totales del turno usando el total calculado en 'venta'.
-                turno.TotalVentas += venta.Total;
-
+                turno.TotalVentas += totalFinal;
                 turno.ResumenVentas += 1;
 
                 await _context.SaveChangesAsync();
                 await transaction.CommitAsync();
-
                 return await ObtenerPorId(venta.Id) ?? _mapper.Map<VentaDto>(venta);
             }
             catch (Exception ex)
@@ -319,10 +299,16 @@ namespace Syspharma.Business.Services
             return await ObtenerPorId(venta.Id) ?? _mapper.Map<VentaDto>(venta);
         }
 
+
         public async Task<bool> Eliminar(int id)
         {
-            var v = await _context.Ventas.FindAsync(id);
+            var v = await _context.Ventas
+                .Include(v => v.VentaDetalles)
+                .Include(v => v.VentaDetallesServicios)
+                .FirstOrDefaultAsync(v => v.Id == id);
             if (v == null) return false;
+            _context.VentaDetalles.RemoveRange(v.VentaDetalles);
+            _context.VentaDetalleServicios.RemoveRange(v.VentaDetallesServicios);
             _context.Ventas.Remove(v);
             await _context.SaveChangesAsync();
             return true;

@@ -1,8 +1,11 @@
-﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Syspharma.Business.Services;
 using Syspharma.Domain.DTOs;
+using System;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace Syspharma.API.Controllers
 {
@@ -17,23 +20,41 @@ namespace Syspharma.API.Controllers
             _service = service;
         }
 
-        // GET /api/Categoria — solo activas (para dropdowns de productos, compras, etc.)
+        // GET /api/Categoria
         [HttpGet]
-        public async Task<IActionResult> ObtenerTodos()
+        public async Task<IActionResult> ObtenerTodos([FromQuery] string? estado = null)
         {
-            var result = await _service.ObtenerTodos();
-            return Ok(result);
+            if (string.IsNullOrEmpty(estado) || estado.Equals("activo", StringComparison.OrdinalIgnoreCase))
+            {
+                var result = await _service.ObtenerTodos();
+                return Ok(result);
+            }
+            else if (estado.Equals("todos", StringComparison.OrdinalIgnoreCase))
+            {
+                var result = await _service.ObtenerTodosConInactivos();
+                return Ok(result);
+            }
+            else if (estado.Equals("inactivo", StringComparison.OrdinalIgnoreCase))
+            {
+                var all = await _service.ObtenerTodosConInactivos();
+                var result = all.Where(c => c.Estado == false).ToList();
+                return Ok(result);
+            }
+            else
+            {
+                var result = await _service.ObtenerTodos();
+                return Ok(result);
+            }
         }
 
-        // GET /api/Categoria/todas — activas + inactivas (para la página de gestión de categorías)
         [HttpGet("todas")]
-        public async Task<IActionResult> ObtenerTodosConInactivos()
+        public async Task<IActionResult> ObtenerTodas()
         {
             var result = await _service.ObtenerTodosConInactivos();
             return Ok(result);
         }
 
-        [HttpGet("{id:int}")]
+        [HttpGet("{id}")]
         public async Task<IActionResult> ObtenerPorId(int id)
         {
             var result = await _service.ObtenerPorId(id);

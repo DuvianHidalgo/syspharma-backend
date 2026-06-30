@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Syspharma.Business.Services;
 using Syspharma.Domain.DTOs;
+using Syspharma.API.Filters;
 
 namespace Syspharma.API.Controllers
 {
@@ -15,6 +16,7 @@ namespace Syspharma.API.Controllers
         public VentaController(IVentaService service) => _service = service;
 
         [HttpGet]
+        [RequirePermission("sales.view")]
         public async Task<IActionResult> ObtenerTodos()
         {
             var ventas = await _service.ObtenerTodos();
@@ -29,6 +31,7 @@ namespace Syspharma.API.Controllers
         }
 
         [HttpGet("{id}")]
+        [RequirePermission("sales.view")]
         public async Task<IActionResult> ObtenerPorId(int id)
         {
             var venta = await _service.ObtenerPorId(id);
@@ -36,6 +39,7 @@ namespace Syspharma.API.Controllers
         }
 
         [HttpPost]
+        [RequirePermission("sales.create")]
         public async Task<IActionResult> Crear([FromBody] VentaCreateDto dto)
         {
             try
@@ -47,6 +51,7 @@ namespace Syspharma.API.Controllers
         }
 
         [HttpPut]
+        [RequirePermission("sales.create")]
         public async Task<IActionResult> Actualizar([FromBody] VentaUpdateDto dto)
         {
             try
@@ -58,6 +63,7 @@ namespace Syspharma.API.Controllers
         }
 
         [HttpPatch("{id}/estado")]
+        [RequirePermission("sales.create")]
         public async Task<IActionResult> CambiarEstado(int id, [FromBody] int estadoId)
         {
             try
@@ -69,6 +75,7 @@ namespace Syspharma.API.Controllers
         }
 
         [HttpPatch("{id}/anular")]
+        [RequirePermission("sales.cancel")]
         public async Task<IActionResult> Anular(int id)
         {
             try
@@ -81,6 +88,7 @@ namespace Syspharma.API.Controllers
         }
 
         [HttpDelete("{id}")]
+        [RequirePermission("sales.cancel")]
         public async Task<IActionResult> Eliminar(int id)
         {
             try

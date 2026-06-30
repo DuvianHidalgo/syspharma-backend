@@ -224,7 +224,8 @@ namespace Syspharma.Business.Services
                     Notas = dto.Notas,
                     FechaVenta = DateTime.Now,
                     Origen = string.IsNullOrWhiteSpace(dto.Origen) ? "CAJA" : dto.Origen,
-                    PedidoId = dto.PedidoId
+                    PedidoId = dto.PedidoId,
+                    ReferenciasPago = dto.ReferenciasPago
                 };
 
                 // ✔ Usar la propiedad enviada por el cliente para calcular IVA

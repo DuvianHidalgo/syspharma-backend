@@ -22,6 +22,7 @@ public partial class Venta
     public DateTime? FechaVenta { get; set; }
     public string? Origen { get; set; } = "CAJA";
     public int? PedidoId { get; set; }
+    public string? ReferenciasPago { get; set; }
 
     public virtual EstadosVentum Estado { get; set; } = null!;
     public virtual MetodosPago MetodoPago { get; set; } = null!;

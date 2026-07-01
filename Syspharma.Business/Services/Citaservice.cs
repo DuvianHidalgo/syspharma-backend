@@ -11,7 +11,7 @@ namespace Syspharma.Business.Services
         Task<CitaDto> Actualizar(CitaUpdateDto dto);
         Task<bool> CambiarEstado(int id, int estadoId);
         Task<bool> Eliminar(int id);
-        Task<List<CitaEstadoDto>> ObtenerEstados(); // USAR DTO
+        Task<List<CitaEstadoDto>> ObtenerEstados(); 
     }
 
     public class CitaService : ICitaService

@@ -7,8 +7,8 @@ namespace Syspharma.Business.Services
 {
     public interface ICategoriaService
     {
-        Task<List<CategoriaDto>> ObtenerTodos();                  // solo activas
-        Task<List<CategoriaDto>> ObtenerTodosConInactivos();      // todas
+        Task<List<CategoriaDto>> ObtenerTodos();                 
+        Task<List<CategoriaDto>> ObtenerTodosConInactivos();      
         Task<CategoriaDto?> ObtenerPorId(int id);
         Task<CategoriaDto> Crear(CategoriaCreateDto dto);
         Task<CategoriaDto> Actualizar(CategoriaUpdateDto dto);

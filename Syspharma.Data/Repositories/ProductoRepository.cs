@@ -46,6 +46,7 @@ namespace Syspharma.Data.Repositories
                 ProveedorNombre = p.Proveedor?.Nombre,
                 Precio = p.Precio,
                 PrecioCompra = p.PrecioCompra,
+                PorcentajeIva = p.PorcentajeIva,
                 Stock = activeLotes != null && activeLotes.Any() ? activeLotes.Sum(l => l.Cantidad) : p.Stock,
                 CodigoBarras = p.CodigoBarras,
                 Imagen = p.Imagen,
@@ -129,6 +130,7 @@ namespace Syspharma.Data.Repositories
                 ProveedorId = dto.ProveedorId,
                 Precio = dto.Precio,
                 PrecioCompra = dto.PrecioCompra,
+                PorcentajeIva = dto.PorcentajeIva,
                 Stock = dto.Stock ?? 0,
                 CodigoBarras = dto.CodigoBarras,
                 Imagen = dto.Imagen,
@@ -175,6 +177,7 @@ namespace Syspharma.Data.Repositories
             producto.ProveedorId = dto.ProveedorId;
             producto.Precio = dto.Precio;
             producto.PrecioCompra = dto.PrecioCompra;
+            producto.PorcentajeIva = dto.PorcentajeIva;
             producto.Stock = dto.Stock ?? producto.Stock;
             producto.CodigoBarras = dto.CodigoBarras;
             producto.Imagen = dto.Imagen;
@@ -237,6 +240,16 @@ namespace Syspharma.Data.Repositories
         {
             var producto = await _context.Productos.FindAsync(id);
             if (producto == null) return false;
+
+            var enVentas = await _context.VentaDetalles.AnyAsync(d => d.ProductoId == id);
+            var enPedidos = await _context.PedidoDetalles.AnyAsync(d => d.ProductoId == id);
+            var enCompras = await _context.CompraDetalles.AnyAsync(d => d.ProductoId == id);
+            var enDevoluciones = await _context.DetallesDevoluciones.AnyAsync(d => d.ProductoId == id);
+
+            if (enVentas || enPedidos || enCompras || enDevoluciones)
+            {
+                throw new Exception("No se puede eliminar el producto porque está registrado en transacciones de venta, compra, devolución o pedidos. Desactívelo en su lugar.");
+            }
 
             _context.Productos.Remove(producto);
             await _context.SaveChangesAsync();

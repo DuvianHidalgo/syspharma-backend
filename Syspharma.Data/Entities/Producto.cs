@@ -37,6 +37,8 @@ public partial class Producto
 
     public DateOnly? FechaVencimientoProxima { get; set; }
 
+    public decimal PorcentajeIva { get; set; }
+
     public virtual Categoria Categoria { get; set; } = null!;
 
     public virtual ICollection<CompraDetalle> CompraDetalles { get; set; } = new List<CompraDetalle>();

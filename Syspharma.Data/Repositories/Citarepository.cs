@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Syspharma.Data.Context;
 using Syspharma.Data.Entities;
 using Syspharma.Domain.DTOs;
@@ -67,6 +67,25 @@ namespace Syspharma.Data.Repositories
 
         public async Task<CitaDto> Crear(CitaCreateDto dto)
         {
+            var fechaCita = DateOnly.Parse(dto.Fecha);
+            var horaCita = TimeOnly.Parse(dto.Hora);
+            var fechaHoraCita = fechaCita.ToDateTime(horaCita);
+
+            TimeZoneInfo colombiaZone;
+            try
+            {
+                colombiaZone = TimeZoneInfo.FindSystemTimeZoneById("SA Pacific Standard Time");
+            }
+            catch (TimeZoneNotFoundException)
+            {
+                colombiaZone = TimeZoneInfo.FindSystemTimeZoneById("America/Bogota");
+            }
+
+            var horaActualColombia = TimeZoneInfo.ConvertTime(DateTime.UtcNow, colombiaZone);
+
+            if (fechaHoraCita <= horaActualColombia)
+                throw new Exception("No se puede agendar una cita en una hora o día ya pasado.");
+
             // --- NUEVO: Buscamos el servicio asociado para guardar su precio y nombre histórico ---
             var servicio = await _context.Servicios.FindAsync(dto.ServicioId);
             decimal? precioServicio = servicio?.Precio;
@@ -87,8 +106,8 @@ namespace Syspharma.Data.Repositories
 
                 UsuarioId = dto.UsuarioId > 0 ? dto.UsuarioId : null,
                 EstadoId = 1,
-                Fecha = DateOnly.Parse(dto.Fecha),
-                Hora = TimeOnly.Parse(dto.Hora),
+                Fecha = fechaCita,
+                Hora = horaCita,
                 Notas = dto.Notas,
                 FechaCreacion = DateTime.Now
             };
@@ -99,10 +118,29 @@ namespace Syspharma.Data.Repositories
 
         public async Task<CitaDto> Actualizar(CitaUpdateDto dto)
         {
+            var fechaCita = DateOnly.Parse(dto.Fecha);
+            var horaCita = TimeOnly.Parse(dto.Hora);
+            var fechaHoraCita = fechaCita.ToDateTime(horaCita);
+
+            TimeZoneInfo colombiaZone;
+            try
+            {
+                colombiaZone = TimeZoneInfo.FindSystemTimeZoneById("SA Pacific Standard Time");
+            }
+            catch (TimeZoneNotFoundException)
+            {
+                colombiaZone = TimeZoneInfo.FindSystemTimeZoneById("America/Bogota");
+            }
+
+            var horaActualColombia = TimeZoneInfo.ConvertTime(DateTime.UtcNow, colombiaZone);
+
+            if (fechaHoraCita <= horaActualColombia)
+                throw new Exception("No se puede agendar una cita en una hora o día ya pasado.");
+
             var cita = await _context.Citas.FindAsync(dto.Id) ?? throw new Exception("No existe");
             cita.MedicoId = dto.MedicoId; cita.PacienteNombre = dto.PacienteNombre;
-            cita.EstadoId = dto.EstadoId; cita.Fecha = DateOnly.Parse(dto.Fecha);
-            cita.Hora = TimeOnly.Parse(dto.Hora);
+            cita.EstadoId = dto.EstadoId; cita.Fecha = fechaCita;
+            cita.Hora = horaCita;
             await _context.SaveChangesAsync();
             return await ObtenerPorId(cita.Id) ?? throw new Exception("Error");
         }

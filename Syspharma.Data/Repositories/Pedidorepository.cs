@@ -26,45 +26,61 @@ namespace Syspharma.Data.Repositories
         private readonly SyspharmaContext _context;
         public PedidoRepository(SyspharmaContext context) => _context = context;
 
-        private static PedidoDto MapDto(Pedido p) => new PedidoDto
+        private static PedidoDto MapDto(Pedido p)
         {
-            Id = p.Id,
-            NumeroPedido = p.NumeroPedido,
-            UsuarioId = p.UsuarioId,
-            UsuarioNombre = p.Usuario?.Nombre ?? "Cliente Web",
-            ClienteNombre = p.ClienteNombre,
-            ClienteDocumento = p.ClienteDocumento,
-            ClienteTelefono = p.ClienteTelefono,
-            ClienteEmail = p.ClienteEmail,
-            Direccion = p.Direccion,
-            MetodoPagoId = p.MetodoPagoId,
-            MetodoPagoNombre = p.MetodoPago?.Nombre ?? "No definido",
-            EstadoId = p.EstadoId,
-            EstadoNombre = p.Estado?.Nombre ?? "Pendiente",
-            Subtotal = p.Subtotal,
-            Iva = p.Iva,
-            Total = p.Total,
-            Notas = p.Notas,
-            Origen = p.Origen,
-            FechaCreacion = p.FechaCreacion,
-            FechaEntrega = p.FechaEntrega,
-            Detalles = p.PedidoDetalles.Select(d => new PedidoDetalleDto
+            var detallesList = p.PedidoDetalles.Select(d =>
             {
-                Id = d.Id,
-                ProductoId = d.ProductoId,
-                Nombre = d.Nombre,
-                Cantidad = d.Cantidad,
-                PrecioUnitario = d.PrecioUnitario,
-                Subtotal = d.Subtotal
-            }).ToList()
-        };
+                var porcentajeIva = d.Producto?.PorcentajeIva ?? 0;
+                var ivaLinea = d.Subtotal * (porcentajeIva / 100);
+                return new PedidoDetalleDto
+                {
+                    Id = d.Id,
+                    ProductoId = d.ProductoId,
+                    Nombre = d.Nombre,
+                    Cantidad = d.Cantidad,
+                    PrecioUnitario = d.PrecioUnitario,
+                    Subtotal = d.Subtotal,
+                    PorcentajeIva = porcentajeIva,
+                    Iva = ivaLinea
+                };
+            }).ToList();
+
+            var sumaIvas = detallesList.Sum(d => d.Iva);
+            var ivaConsistente = Math.Abs(sumaIvas - p.Iva) < 0.1m;
+
+            return new PedidoDto
+            {
+                Id = p.Id,
+                NumeroPedido = p.NumeroPedido,
+                UsuarioId = p.UsuarioId,
+                UsuarioNombre = p.Usuario?.Nombre ?? "Cliente Web",
+                ClienteNombre = p.ClienteNombre,
+                ClienteDocumento = p.ClienteDocumento,
+                ClienteTelefono = p.ClienteTelefono,
+                ClienteEmail = p.ClienteEmail,
+                Direccion = p.Direccion,
+                MetodoPagoId = p.MetodoPagoId,
+                MetodoPagoNombre = p.MetodoPago?.Nombre ?? "No definido",
+                EstadoId = p.EstadoId,
+                EstadoNombre = p.Estado?.Nombre ?? "Pendiente",
+                Subtotal = p.Subtotal,
+                Iva = p.Iva,
+                Total = p.Total,
+                Notas = p.Notas,
+                Origen = p.Origen,
+                FechaCreacion = p.FechaCreacion,
+                FechaEntrega = p.FechaEntrega,
+                IvaConsistente = ivaConsistente,
+                Detalles = detallesList
+            };
+        }
 
         private string GenerarNumeroPedido() => $"PED-{DateTime.Now:yyyyMMdd}-{new Random().Next(1000, 9999)}";
 
         public async Task<List<PedidoDto>> ObtenerTodos()
         {
             var pedidos = await _context.Pedidos
-                .Include(p => p.Usuario).Include(p => p.MetodoPago).Include(p => p.Estado).Include(p => p.PedidoDetalles)
+                .Include(p => p.Usuario).Include(p => p.MetodoPago).Include(p => p.Estado).Include(p => p.PedidoDetalles).ThenInclude(d => d.Producto)
                 .OrderByDescending(p => p.FechaCreacion).ToListAsync();
             return pedidos.Select(MapDto).ToList();
         }
@@ -72,7 +88,7 @@ namespace Syspharma.Data.Repositories
         public async Task<List<PedidoDto>> ObtenerPorUsuario(int usuarioId)
         {
             var pedidos = await _context.Pedidos
-                .Include(p => p.Usuario).Include(p => p.Estado).Include(p => p.PedidoDetalles)
+                .Include(p => p.Usuario).Include(p => p.Estado).Include(p => p.PedidoDetalles).ThenInclude(d => d.Producto)
                 .Where(p => p.UsuarioId == usuarioId).OrderByDescending(p => p.FechaCreacion).ToListAsync();
             return pedidos.Select(MapDto).ToList();
         }
@@ -80,7 +96,7 @@ namespace Syspharma.Data.Repositories
         public async Task<PedidoDto?> ObtenerPorId(int id)
         {
             var p = await _context.Pedidos
-                .Include(p => p.Usuario).Include(p => p.MetodoPago).Include(p => p.Estado).Include(p => p.PedidoDetalles)
+                .Include(p => p.Usuario).Include(p => p.MetodoPago).Include(p => p.Estado).Include(p => p.PedidoDetalles).ThenInclude(d => d.Producto)
                 .FirstOrDefaultAsync(p => p.Id == id);
             return p == null ? null : MapDto(p);
         }
@@ -96,8 +112,31 @@ namespace Syspharma.Data.Repositories
                 // VALIDACIÓN DE MÉTODO DE PAGO (Evita el error 400)
                 int idMetodoPago = (dto.MetodoPagoId.HasValue && dto.MetodoPagoId > 0) ? dto.MetodoPagoId.Value : 1;
 
-                decimal subtotal = dto.Detalles?.Sum(d => d.Cantidad * d.PrecioUnitario) ?? 0;
-                decimal iva = subtotal * (dto.PorcentajeIva / 100);
+                // Cargar los IVA reales de los productos desde la base de datos
+                var productoIds = dto.Detalles?.Select(d => d.ProductoId).Where(id => id.HasValue).Select(id => id.Value).ToList() ?? new List<int>();
+                var productosDb = await _context.Productos
+                    .Where(p => productoIds.Contains(p.Id))
+                    .ToDictionaryAsync(p => p.Id, p => p.PorcentajeIva);
+
+                decimal subtotal = 0;
+                decimal totalIva = 0;
+
+                if (dto.Detalles != null)
+                {
+                    foreach (var d in dto.Detalles)
+                    {
+                        var subtotalLinea = d.Cantidad * d.PrecioUnitario;
+                        subtotal += subtotalLinea;
+                        decimal porcentajeIva = 0;
+                        if (d.ProductoId.HasValue && productosDb.TryGetValue(d.ProductoId.Value, out var pctIva))
+                        {
+                            porcentajeIva = pctIva;
+                        }
+                        totalIva += subtotalLinea * (porcentajeIva / 100);
+                    }
+                }
+
+                decimal iva = totalIva;
 
                 var pedido = new Pedido
                 {
@@ -123,28 +162,35 @@ namespace Syspharma.Data.Repositories
                 _context.Pedidos.Add(pedido);
                 await _context.SaveChangesAsync();
 
-                if (dto.Detalles != null)
+                if (dto.Detalles == null || !dto.Detalles.Any())
                 {
-                    foreach (var d in dto.Detalles)
-                    {
-                        _context.PedidoDetalles.Add(new PedidoDetalle
-                        {
-                            PedidoId = pedido.Id,
-                            ProductoId = d.ProductoId,
-                            Nombre = d.Nombre,
-                            Cantidad = d.Cantidad,
-                            PrecioUnitario = d.PrecioUnitario,
-                            Subtotal = d.Cantidad * d.PrecioUnitario
-                        });
+                    throw new Exception("El pedido debe contener al menos un producto.");
+                }
 
-                        var producto = await _context.Productos.FindAsync(d.ProductoId);
-                        if (producto != null)
-                        {
-                            if (producto.Stock < d.Cantidad)
-                                throw new Exception($"Stock insuficiente para '{producto.Nombre}'. Disponible: {producto.Stock}, solicitado: {d.Cantidad}.");
-                            producto.Stock -= d.Cantidad;
-                            _context.Entry(producto).State = EntityState.Modified;
-                        }
+                foreach (var d in dto.Detalles)
+                {
+                    if (d.Cantidad <= 0)
+                        throw new Exception($"La cantidad solicitada para el producto '{d.Nombre}' debe ser mayor a cero.");
+                    if (d.PrecioUnitario < 0)
+                        throw new Exception($"El precio unitario para el producto '{d.Nombre}' no puede ser negativo.");
+
+                    _context.PedidoDetalles.Add(new PedidoDetalle
+                    {
+                        PedidoId = pedido.Id,
+                        ProductoId = d.ProductoId,
+                        Nombre = d.Nombre,
+                        Cantidad = d.Cantidad,
+                        PrecioUnitario = d.PrecioUnitario,
+                        Subtotal = d.Cantidad * d.PrecioUnitario
+                    });
+
+                    var producto = await _context.Productos.FindAsync(d.ProductoId);
+                    if (producto != null)
+                    {
+                        if (producto.Stock < d.Cantidad)
+                            throw new Exception($"Stock insuficiente para '{producto.Nombre}'. Disponible: {producto.Stock}, solicitado: {d.Cantidad}.");
+                        producto.Stock -= d.Cantidad;
+                        _context.Entry(producto).State = EntityState.Modified;
                     }
                 }
 

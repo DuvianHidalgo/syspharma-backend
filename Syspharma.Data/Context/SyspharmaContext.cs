@@ -399,6 +399,7 @@ public partial class SyspharmaContext : IdentityDbContext<Usuario, IdentityRole<
             entity.Property(e => e.Stock).HasColumnName("stock");
             entity.Property(e => e.UltimaActualizacion).HasDefaultValueSql("(getdate())").HasColumnType("datetime").HasColumnName("ultimaActualizacion");
             entity.Property(e => e.FechaVencimientoProxima).HasColumnName("fechaVencimientoProxima");
+            entity.Property(e => e.PorcentajeIva).HasColumnType("decimal(5, 2)").HasDefaultValue(0.00m).HasColumnName("porcentajeIva");
             entity.HasOne(d => d.Categoria).WithMany(p => p.Productos).HasForeignKey(d => d.CategoriaId).OnDelete(DeleteBehavior.ClientSetNull).HasConstraintName("FK_Productos_Categorias");
             entity.HasOne(d => d.Proveedor).WithMany(p => p.Productos).HasForeignKey(d => d.ProveedorId).OnDelete(DeleteBehavior.SetNull).HasConstraintName("FK_Productos_Proveedores");
         });

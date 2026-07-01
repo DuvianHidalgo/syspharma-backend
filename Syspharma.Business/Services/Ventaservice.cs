@@ -195,6 +195,9 @@ namespace Syspharma.Business.Services
             if (turno == null)
                 throw new Exception($"El turno con ID {dto.TurnoId} no existe en la base de datos. Por favor, cierre sesión y vuelva a entrar.");
 
+            if (turno.Estado != "activo")
+                throw new Exception("El turno (caja) seleccionado no está activo o ya ha sido cerrado. Por favor, abra un turno de caja antes de registrar ventas.");
+
             var metodoPago = await _context.MetodosPagos.FindAsync(dto.MetodoPagoId);
             if (metodoPago == null)
                 throw new Exception("El método de pago seleccionado no es válido o no existe.");
@@ -239,6 +242,13 @@ namespace Syspharma.Business.Services
                 {
                     foreach (var d in dto.Detalles)
                     {
+                        if (d.Cantidad <= 0)
+                            throw new Exception("La cantidad del producto vendido debe ser mayor a cero.");
+                        if (d.PrecioUnitario < 0)
+                            throw new Exception("El precio unitario del producto no puede ser negativo.");
+                        if (d.Descuento < 0 || d.Descuento > d.Cantidad * d.PrecioUnitario)
+                            throw new Exception("El descuento no puede ser negativo ni mayor al subtotal del producto.");
+
                         _context.VentaDetalles.Add(new VentaDetalle
                         {
                             VentaId = venta.Id,
@@ -246,8 +256,10 @@ namespace Syspharma.Business.Services
                             Cantidad = d.Cantidad,
                             PrecioUnitario = d.PrecioUnitario,
                             Descuento = d.Descuento,
-                            Subtotal = (d.Cantidad * d.PrecioUnitario) - d.Descuento
+                            Subtotal = (d.Cantidad * d.PrecioUnitario) - d.Descuento,
+                            LoteId = d.LoteId
                         });
+
                         var producto = await _context.Productos.FindAsync(d.ProductoId);
                         if (producto != null)
                         {
@@ -256,6 +268,17 @@ namespace Syspharma.Business.Services
                             producto.Stock -= d.Cantidad;
                             producto.UltimaActualizacion = DateTime.Now;
                         }
+
+                        if (d.LoteId.HasValue && d.LoteId.Value > 0)
+                        {
+                            var lote = await _context.Lotes.FindAsync(d.LoteId.Value);
+                            if (lote != null)
+                            {
+                                if (lote.Cantidad < d.Cantidad)
+                                    throw new Exception($"Stock insuficiente en el lote '{lote.NumeroLote}' para '{producto?.Nombre ?? "Producto"}'. Disponible: {lote.Cantidad}, solicitado: {d.Cantidad}.");
+                                lote.Cantidad -= d.Cantidad;
+                            }
+                        }
                     }
                 }
 
@@ -263,6 +286,13 @@ namespace Syspharma.Business.Services
                 {
                     foreach (var s in dto.Servicios)
                     {
+                        if (s.Cantidad <= 0)
+                            throw new Exception("La cantidad del servicio vendido debe ser mayor a cero.");
+                        if (s.PrecioUnitario < 0)
+                            throw new Exception("El precio unitario del servicio no puede ser negativo.");
+                        if (s.Descuento < 0 || s.Descuento > s.Cantidad * s.PrecioUnitario)
+                            throw new Exception("El descuento del servicio no puede ser negativo ni mayor al subtotal del servicio.");
+
                         _context.VentaDetalleServicios.Add(new VentaDetalleServicio
                         {
                             VentaId = venta.Id,

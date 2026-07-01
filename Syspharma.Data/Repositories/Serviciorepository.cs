@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Syspharma.Data.Context;
 using Syspharma.Data.Entities;
 using Syspharma.Domain.DTOs;
@@ -130,6 +130,15 @@ namespace Syspharma.Data.Repositories
         {
             var s = await _context.Servicios.FindAsync(id);
             if (s == null) return false;
+
+            var enCitas = await _context.Citas.AnyAsync(c => c.ServicioId == id);
+            var enVentas = await _context.VentaDetalleServicios.AnyAsync(v => v.ServicioId == id);
+
+            if (enCitas || enVentas)
+            {
+                throw new Exception("No se puede eliminar el servicio porque está asociado a citas o ventas registradas. Desactívelo en su lugar.");
+            }
+
             _context.Servicios.Remove(s);
             await _context.SaveChangesAsync();
             return true;

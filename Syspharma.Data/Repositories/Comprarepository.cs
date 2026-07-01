@@ -27,6 +27,7 @@ namespace Syspharma.Data.Repositories
             NumeroCompra = c.NumeroCompra,
             ProveedorId = c.ProveedorId,
             ProveedorNombre = c.Proveedor?.Nombre ?? "",
+            ProveedorDocumento = c.Proveedor?.Documento ?? "",
             UsuarioId = c.UsuarioId,
             UsuarioNombre = c.Usuario?.Nombre ?? "",
             EstadoId = c.EstadoId,
@@ -83,9 +84,17 @@ namespace Syspharma.Data.Repositories
                 .FirstOrDefaultAsync(e => e.Nombre.ToLower() == "pendiente")
                 ?? throw new Exception("Estado 'pendiente' no encontrado");
 
-            // Validaciones de medicamentos
+            if (dto.Detalles == null || !dto.Detalles.Any())
+                throw new Exception("La compra debe contener al menos un producto.");
+
+            // Validaciones de medicamentos y valores numéricos
             foreach (var det in dto.Detalles)
             {
+                if (det.Cantidad <= 0)
+                    throw new Exception("La cantidad a comprar debe ser mayor a cero.");
+                if (det.PrecioUnitario < 0)
+                    throw new Exception("El precio unitario (costo) de compra no puede ser negativo.");
+
                 var prod = await _context.Productos
                     .Include(p => p.ProductoMedicamento)
                     .FirstOrDefaultAsync(p => p.Id == det.ProductoId);

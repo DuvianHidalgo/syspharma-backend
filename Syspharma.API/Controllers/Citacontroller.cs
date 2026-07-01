@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Syspharma.Business.Services;
@@ -28,10 +28,30 @@ namespace Syspharma.API.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> Crear([FromBody] CitaCreateDto dto) => Ok(await _service.Crear(dto));
+        public async Task<IActionResult> Crear([FromBody] CitaCreateDto dto)
+        {
+            try
+            {
+                return Ok(await _service.Crear(dto));
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
 
         [HttpPut]
-        public async Task<IActionResult> Actualizar([FromBody] CitaUpdateDto dto) => Ok(await _service.Actualizar(dto));
+        public async Task<IActionResult> Actualizar([FromBody] CitaUpdateDto dto)
+        {
+            try
+            {
+                return Ok(await _service.Actualizar(dto));
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
 
         [HttpPatch("{id}/estado")]
         public async Task<IActionResult> CambiarEstado(int id, [FromBody] int estadoId)

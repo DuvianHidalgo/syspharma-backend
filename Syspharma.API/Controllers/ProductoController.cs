@@ -29,13 +29,6 @@ namespace Syspharma.API.Controllers
             return Ok(result);
         }
 
-        [HttpGet("proximos-a-vencer")]
-        public async Task<IActionResult> ProximosAVencer([FromQuery] int dias = 30)
-        {
-            var result = await _service.ProximosAVencer(dias);
-            return Ok(result);
-        }
-
         [HttpGet("{id}")]
         public async Task<IActionResult> ObtenerPorId(int id)
         {
@@ -104,29 +97,37 @@ namespace Syspharma.API.Controllers
 
         [HttpGet("proximos-a-vencer")]
         [AllowAnonymous]
-        public async Task<IActionResult> ProximosAVencer()
+        public async Task<IActionResult> ProximosAVencer([FromQuery] int? dias = null)
         {
             try
             {
-                var config = await _context.Configuraciones
-                    .FirstOrDefaultAsync(c => c.Clave == "dias_alerta_vencimiento");
-                var dias = int.TryParse(config?.Valor, out var d) ? d : 30;
+                int diasLimite;
+                if (dias.HasValue)
+                {
+                    diasLimite = dias.Value;
+                }
+                else
+                {
+                    var config = await _context.Configuraciones
+                        .FirstOrDefaultAsync(c => c.Clave == "dias_alerta_vencimiento");
+                    diasLimite = int.TryParse(config?.Valor, out var d) ? d : 30;
+                }
 
-                var hoy = DateTime.Today;
-                var limite = hoy.AddDays(dias);
+                var hoyDateOnly = DateOnly.FromDateTime(DateTime.Today);
+                var limiteDateOnly = hoyDateOnly.AddDays(diasLimite);
 
                 var productos = await _context.Productos
                     .Where(p => p.Estado &&
                                 p.FechaVencimientoProxima != null &&
-                                p.FechaVencimientoProxima.Value.ToDateTime(TimeOnly.MinValue) <= limite &&
-                                p.FechaVencimientoProxima.Value.ToDateTime(TimeOnly.MinValue) >= hoy)
+                                p.FechaVencimientoProxima <= limiteDateOnly &&
+                                p.FechaVencimientoProxima >= hoyDateOnly)
                     .Select(p => new
                     {
                         p.Id,
                         p.Nombre,
                         p.Stock,
                         FechaVencimiento = p.FechaVencimientoProxima,
-                        DiasRestantes = EF.Functions.DateDiffDay(hoy, p.FechaVencimientoProxima!.Value.ToDateTime(TimeOnly.MinValue))
+                        DiasRestantes = EF.Functions.DateDiffDay(hoyDateOnly, p.FechaVencimientoProxima!.Value)
                     })
                     .OrderBy(p => p.FechaVencimiento)
                     .ToListAsync();
@@ -136,6 +137,43 @@ namespace Syspharma.API.Controllers
             catch (Exception ex)
             {
                 return StatusCode(500, new { message = ex.Message, detail = ex.InnerException?.Message });
+            }
+        }
+
+        [HttpGet("{id}/lotes")]
+        public async Task<IActionResult> ObtenerLotesPorProducto(int id)
+        {
+            try
+            {
+                var productoExiste = await _context.Productos.AnyAsync(p => p.Id == id);
+                if (!productoExiste) return NotFound(new { message = "Producto no encontrado" });
+
+                var hoy = DateOnly.FromDateTime(DateTime.Today);
+                var config = await _context.Configuraciones
+                    .FirstOrDefaultAsync(c => c.Clave == "dias_alerta_vencimiento");
+                int diasAlerta = int.TryParse(config?.Valor, out var d) ? d : 30;
+                var limiteAlerta = hoy.AddDays(diasAlerta);
+
+                var lotes = await _context.Lotes
+                    .Where(l => l.ProductoId == id)
+                    .Select(l => new
+                    {
+                        l.Id,
+                        l.NumeroLote,
+                        l.FechaVencimiento,
+                        CantidadDisponible = l.Cantidad,
+                        Estado = l.Cantidad == 0 ? "Agotado" :
+                                 l.FechaVencimiento < hoy ? "Vencido" :
+                                 l.FechaVencimiento <= limiteAlerta ? "Por vencer" : "Vigente"
+                    })
+                    .OrderBy(l => l.FechaVencimiento)
+                    .ToListAsync();
+
+                return Ok(lotes);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
             }
         }
     }

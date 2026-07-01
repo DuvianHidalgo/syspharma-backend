@@ -29,52 +29,62 @@ namespace Syspharma.Data.Repositories
             _context = context;
         }
 
-        private static ProductoDto MapToDto(Producto p) => new ProductoDto
+        private static ProductoDto MapToDto(Producto p)
         {
-            Id = p.Id,
-            Nombre = p.Nombre,
-            Descripcion = p.Descripcion,
-            CategoriaId = p.CategoriaId,
-            CategoriaNombre = p.Categoria?.Nombre,
-            ProveedorId = p.ProveedorId,
-            ProveedorNombre = p.Proveedor?.Nombre,
-            Precio = p.Precio,
-            PrecioCompra = p.PrecioCompra,
-            Stock = p.Stock,
-            CodigoBarras = p.CodigoBarras,
-            Imagen = p.Imagen,
-            Estado = p.Estado,
-            FechaCreacion = p.FechaCreacion,
-            UltimaActualizacion = p.UltimaActualizacion,
-            FechaVencimientoProxima = p.FechaVencimientoProxima
-        };
+            var activeLotes = p.Lotes?.Where(l => l.FechaVencimiento >= DateOnly.FromDateTime(DateTime.Today) && l.Cantidad > 0).ToList();
+
+            return new ProductoDto
+            {
+                Id = p.Id,
+                Nombre = p.Nombre,
+                Descripcion = p.Descripcion,
+                Marca = p.Marca,
+                Presentacion = p.Presentacion,
+                CategoriaId = p.CategoriaId,
+                CategoriaNombre = p.Categoria?.Nombre,
+                ProveedorId = p.ProveedorId,
+                ProveedorNombre = p.Proveedor?.Nombre,
+                Precio = p.Precio,
+                PrecioCompra = p.PrecioCompra,
+                Stock = activeLotes != null && activeLotes.Any() ? activeLotes.Sum(l => l.Cantidad) : p.Stock,
+                CodigoBarras = p.CodigoBarras,
+                Imagen = p.Imagen,
+                Estado = p.Estado,
+                FechaCreacion = p.FechaCreacion,
+                UltimaActualizacion = p.UltimaActualizacion,
+                FechaVencimientoProxima = activeLotes != null && activeLotes.Any() ? activeLotes.Min(l => l.FechaVencimiento) : p.FechaVencimientoProxima,
+                Medicamento = p.ProductoMedicamento != null ? new ProductoMedicamentoDto
+                {
+                    Id = p.ProductoMedicamento.Id,
+                    ProductoId = p.ProductoMedicamento.ProductoId,
+                    Composicion = p.ProductoMedicamento.Composicion,
+                    Concentracion = p.ProductoMedicamento.Concentracion,
+                    ViaAdministracion = p.ProductoMedicamento.ViaAdministracion,
+                    RegistroSanitario = p.ProductoMedicamento.RegistroSanitario,
+                    RequiereFormula = p.ProductoMedicamento.RequiereFormula
+                } : null,
+                Lotes = activeLotes?.Select(l => new LoteDto
+                {
+                    Id = l.Id,
+                    ProductoId = l.ProductoId,
+                    NumeroLote = l.NumeroLote,
+                    Cantidad = l.Cantidad,
+                    FechaVencimiento = l.FechaVencimiento,
+                    CostoUnitario = l.CostoUnitario
+                }).ToList() ?? new()
+            };
+        }
 
         public async Task<List<ProductoDto>> ObtenerTodos()
         {
-            return await _context.Productos
+            var productos = await _context.Productos
                 .Include(p => p.Categoria)
                 .Include(p => p.Proveedor)
-                .Include(p => p.ProductoMedicamento) // <-- NUEVO: Incluir medicamento
-                .Select(p => new ProductoDto
-                {
-                    Id = p.Id,
-                    Nombre = p.Nombre,
-                    Descripcion = p.Descripcion,
-                    CategoriaId = p.CategoriaId,
-                    CategoriaNombre = p.Categoria.Nombre,
-                    ProveedorId = p.ProveedorId,
-                    ProveedorNombre = p.Proveedor != null ? p.Proveedor.Nombre : null,
-                    Precio = p.Precio,
-                    PrecioCompra = p.PrecioCompra,
-                    Stock = p.Stock,
-                    CodigoBarras = p.CodigoBarras,
-                    Imagen = p.Imagen,
-                    Estado = p.Estado,
-                    FechaCreacion = p.FechaCreacion,
-                    UltimaActualizacion = p.UltimaActualizacion,
-                    FechaVencimientoProxima = p.FechaVencimientoProxima
-                })
+                .Include(p => p.ProductoMedicamento)
+                .Include(p => p.Lotes)
                 .ToListAsync();
+
+            return productos.Select(MapToDto).ToList();
         }
 
         public async Task<ProductoDto?> ObtenerPorId(int id)
@@ -82,7 +92,8 @@ namespace Syspharma.Data.Repositories
             var p = await _context.Productos
                 .Include(p => p.Categoria)
                 .Include(p => p.Proveedor)
-                .Include(p => p.ProductoMedicamento) // <-- NUEVO: Incluir medicamento
+                .Include(p => p.ProductoMedicamento)
+                .Include(p => p.Lotes)
                 .FirstOrDefaultAsync(p => p.Id == id);
 
             return p == null ? null : MapToDto(p);
@@ -91,33 +102,19 @@ namespace Syspharma.Data.Repositories
         public async Task<List<ProductoDto>> ProximosAVencer(int dias)
         {
             var limite = DateOnly.FromDateTime(DateTime.Today.AddDays(dias));
-            return await _context.Productos
+            var productos = await _context.Productos
                 .Include(p => p.Categoria)
                 .Include(p => p.Proveedor)
-                .Where(p => p.FechaVencimientoProxima != null
-                         && p.FechaVencimientoProxima <= limite
-                         && p.Estado == true)
-                .OrderBy(p => p.FechaVencimientoProxima)
-                .Select(p => new ProductoDto
-                {
-                    Id = p.Id,
-                    Nombre = p.Nombre,
-                    Descripcion = p.Descripcion,
-                    CategoriaId = p.CategoriaId,
-                    CategoriaNombre = p.Categoria.Nombre,
-                    ProveedorId = p.ProveedorId,
-                    ProveedorNombre = p.Proveedor != null ? p.Proveedor.Nombre : null,
-                    Precio = p.Precio,
-                    PrecioCompra = p.PrecioCompra,
-                    Stock = p.Stock,
-                    CodigoBarras = p.CodigoBarras,
-                    Imagen = p.Imagen,
-                    Estado = p.Estado,
-                    FechaCreacion = p.FechaCreacion,
-                    UltimaActualizacion = p.UltimaActualizacion,
-                    FechaVencimientoProxima = p.FechaVencimientoProxima
-                })
+                .Include(p => p.ProductoMedicamento)
+                .Include(p => p.Lotes)
+                .Where(p => p.Estado == true)
                 .ToListAsync();
+
+            return productos
+                .Select(MapToDto)
+                .Where(p => p.FechaVencimientoProxima != null && p.FechaVencimientoProxima <= limite)
+                .OrderBy(p => p.FechaVencimientoProxima)
+                .ToList();
         }
 
         public async Task<ProductoDto> Crear(ProductoCreateDto dto)
@@ -126,6 +123,8 @@ namespace Syspharma.Data.Repositories
             {
                 Nombre = dto.Nombre,
                 Descripcion = dto.Descripcion,
+                Marca = dto.Marca,
+                Presentacion = dto.Presentacion,
                 CategoriaId = dto.CategoriaId,
                 ProveedorId = dto.ProveedorId,
                 Precio = dto.Precio,
@@ -149,7 +148,6 @@ namespace Syspharma.Data.Repositories
                     ProductoId = producto.Id,
                     Composicion = dto.Medicamento.Composicion,
                     Concentracion = dto.Medicamento.Concentracion,
-                    Presentacion = dto.Medicamento.Presentacion,
                     ViaAdministracion = dto.Medicamento.ViaAdministracion,
                     RegistroSanitario = dto.Medicamento.RegistroSanitario,
                     RequiereFormula = dto.Medicamento.RequiereFormula
@@ -171,6 +169,8 @@ namespace Syspharma.Data.Repositories
 
             producto.Nombre = dto.Nombre;
             producto.Descripcion = dto.Descripcion;
+            producto.Marca = dto.Marca;
+            producto.Presentacion = dto.Presentacion;
             producto.CategoriaId = dto.CategoriaId;
             producto.ProveedorId = dto.ProveedorId;
             producto.Precio = dto.Precio;
@@ -196,7 +196,6 @@ namespace Syspharma.Data.Repositories
                         ProductoId = producto.Id,
                         Composicion = dto.Medicamento.Composicion,
                         Concentracion = dto.Medicamento.Concentracion,
-                        Presentacion = dto.Medicamento.Presentacion,
                         ViaAdministracion = dto.Medicamento.ViaAdministracion,
                         RegistroSanitario = dto.Medicamento.RegistroSanitario,
                         RequiereFormula = dto.Medicamento.RequiereFormula
@@ -208,7 +207,6 @@ namespace Syspharma.Data.Repositories
                     // Si ya existía, actualizamos sus campos adicionales
                     medicamentoExistente.Composicion = dto.Medicamento.Composicion;
                     medicamentoExistente.Concentracion = dto.Medicamento.Concentracion;
-                    medicamentoExistente.Presentacion = dto.Medicamento.Presentacion;
                     medicamentoExistente.ViaAdministracion = dto.Medicamento.ViaAdministracion;
                     medicamentoExistente.RegistroSanitario = dto.Medicamento.RegistroSanitario;
                     medicamentoExistente.RequiereFormula = dto.Medicamento.RequiereFormula;

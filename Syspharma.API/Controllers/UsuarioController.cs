@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -7,12 +7,19 @@ using Syspharma.Business.Services;
 using Syspharma.Data.Context;
 using Syspharma.Data.Entities;
 using Syspharma.Domain.DTOs;
+using System;
 using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Syspharma.API.Filters;
 
 namespace Syspharma.API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
     public class UsuarioController : ControllerBase
     {
         private readonly IUsuarioService _service;
@@ -29,6 +36,7 @@ namespace Syspharma.API.Controllers
         }
 
         [HttpGet]
+        [RequirePermission("users.view")]
         public async Task<IActionResult> ObtenerTodos()
         {
             var usuarios = await _service.ObtenerTodos();
@@ -38,12 +46,43 @@ namespace Syspharma.API.Controllers
         [HttpGet("{id}")]
         public async Task<IActionResult> ObtenerPorId(int id)
         {
+            var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier);
+            if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out var loggedInUserId))
+            {
+                return Unauthorized();
+            }
+
+            // Permitir si es el mismo usuario logueado
+            if (loggedInUserId == id)
+            {
+                var selfUsuario = await _service.ObtenerPorId(id);
+                if (selfUsuario == null) return NotFound(new { message = "Usuario no encontrado" });
+                return Ok(selfUsuario);
+            }
+
+            // Si es otro usuario, verificar si tiene el permiso "users.view"
+            var usuarioLogueado = await _context.Usuarios
+                .Include(u => u.Role)
+                    .ThenInclude(r => r.RolesPermisos)
+                        .ThenInclude(rp => rp.Permiso)
+                .FirstOrDefaultAsync(u => u.Id == loggedInUserId);
+
+            var esAdmin = usuarioLogueado?.Role?.Nombre?.Equals("Administrador", StringComparison.OrdinalIgnoreCase) ?? false;
+            var tienePermiso = esAdmin || (usuarioLogueado?.Role?.RolesPermisos?.Any(rp => 
+                rp.Permiso.Codigo.Equals("users.view", StringComparison.OrdinalIgnoreCase)) ?? false);
+
+            if (!tienePermiso)
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, new { message = "No tienes el permiso requerido: users.view" });
+            }
+
             var usuario = await _service.ObtenerPorId(id);
             if (usuario == null) return NotFound(new { message = "Usuario no encontrado" });
             return Ok(usuario);
         }
 
         [HttpPost]
+        [RequirePermission("users.create")]
         public async Task<IActionResult> Crear([FromBody] UsuarioCreateDto dto)
         {
             try
@@ -52,15 +91,18 @@ namespace Syspharma.API.Controllers
                     return BadRequest(new { message = "La contraseña es obligatoria" });
 
                 if (await _context.Usuarios.AnyAsync(u => u.Email == dto.Email))
-                    return BadRequest(new { message = "El email ya está registrado" });
+                    return BadRequest(new { message = "El correo ya está registrado" });
+
+                if (!string.IsNullOrEmpty(dto.Documento) && await _context.Usuarios.AnyAsync(u => u.Documento == dto.Documento))
+                    return BadRequest(new { message = "El número de documento ya está registrado por otro usuario." });
 
                 var usuario = new Usuario
                 {
-                    Nombre = dto.Nombre,
-                    Email = dto.Email,
                     UserName = dto.Email,
-                    TipoDocumentoId = dto.TipoDocumentoId,
+                    Email = dto.Email,
+                    Nombre = dto.Nombre,
                     Documento = dto.Documento,
+                    TipoDocumentoId = dto.TipoDocumentoId,
                     Telefono = dto.Telefono,
                     RoleId = dto.RolId,
                     FechaCreacion = DateTime.Now,
@@ -96,6 +138,7 @@ namespace Syspharma.API.Controllers
         }
 
         [HttpPut]
+        [RequirePermission("users.edit")]
         public async Task<IActionResult> Actualizar([FromBody] UsuarioUpdateDto dto)
         {
             try
@@ -111,6 +154,7 @@ namespace Syspharma.API.Controllers
 
         [HttpPost("{id}/foto")]
         [Consumes("multipart/form-data")]
+        [RequirePermission("users.edit")]
         public async Task<IActionResult> SubirFoto(int id, IFormFile foto)
         {
             try
@@ -157,6 +201,7 @@ namespace Syspharma.API.Controllers
         }
 
         [HttpPatch("{id}/estado")]
+        [RequirePermission("users.status")]
         public async Task<IActionResult> CambiarEstado(int id, [FromBody] bool estado)
         {
             try
@@ -171,6 +216,7 @@ namespace Syspharma.API.Controllers
         }
 
         [HttpDelete("{id}")]
+        [RequirePermission("users.delete")]
         public async Task<IActionResult> Delete(int id)
         {
             try

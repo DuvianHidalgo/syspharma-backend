@@ -25,6 +25,7 @@ namespace Syspharma.Domain.DTOs
         public DateTime? FechaVenta { get; set; }
         public string Origen { get; set; } = "CAJA";
         public int? PedidoId { get; set; }
+        public string? ReferenciasPago { get; set; }
         public List<VentaDetalleDto> Detalles { get; set; } = new();
         public List<VentaDetalleServicioDto> Servicios { get; set; } = new();
     }
@@ -38,6 +39,7 @@ namespace Syspharma.Domain.DTOs
         public decimal PrecioUnitario { get; set; }
         public decimal Descuento { get; set; }
         public decimal Subtotal { get; set; }
+        public int? LoteId { get; set; }
     }
 
     public class VentaDetalleServicioDto
@@ -67,6 +69,7 @@ namespace Syspharma.Domain.DTOs
         public string? Notas { get; set; }
         public string Origen { get; set; } = "CAJA";
         public int? PedidoId { get; set; }
+        public string? ReferenciasPago { get; set; }
         public List<VentaDetalleCreateDto> Detalles { get; set; } = new();
         public List<VentaDetalleServicioCreateDto> Servicios { get; set; } = new();
     }
@@ -78,6 +81,7 @@ namespace Syspharma.Domain.DTOs
         public decimal PrecioUnitario { get; set; }
         public decimal Descuento { get; set; }
         public decimal Subtotal { get; set; }
+        public int? LoteId { get; set; }
     }
 
     public class VentaDetalleServicioCreateDto

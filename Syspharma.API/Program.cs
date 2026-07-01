@@ -143,6 +143,7 @@ builder.Services.AddScoped<IDevolucionService, DevolucionService>();
 // 11. Otros
 builder.Services.AddMemoryCache();
 builder.Services.AddTransient<IEmailSender, SmtpEmailSender>();
+builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true);
 
 var app = builder.Build();
 

@@ -1,4 +1,8 @@
 using Microsoft.EntityFrameworkCore;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 using Syspharma.Data.Context;
 using Syspharma.Data.Entities;
 using Syspharma.Domain.DTOs;
@@ -71,8 +75,9 @@ namespace Syspharma.Data.Repositories
         public async Task<List<GastoDto>> ObtenerHoy(int? usuarioId)
         {
             var hoy = DateTime.Today;
+            var mañana = hoy.AddDays(1);
             var query = _context.Gastos.Include(g => g.Usuario)
-                .Where(g => g.FechaGasto.HasValue && g.FechaGasto.Value.Date == hoy && !g.Anulado);
+                .Where(g => g.FechaGasto >= hoy && g.FechaGasto < mañana && !g.Anulado);
 
             if (usuarioId.HasValue)
                 query = query.Where(g => g.UsuarioId == usuarioId.Value);

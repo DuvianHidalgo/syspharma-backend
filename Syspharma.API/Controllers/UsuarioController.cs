@@ -93,6 +93,9 @@ namespace Syspharma.API.Controllers
                 if (await _context.Usuarios.AnyAsync(u => u.Email == dto.Email))
                     return BadRequest(new { message = "El correo ya está registrado" });
 
+                if (!string.IsNullOrEmpty(dto.Documento) && await _context.Usuarios.AnyAsync(u => u.Documento == dto.Documento))
+                    return BadRequest(new { message = "El número de documento ya está registrado por otro usuario." });
+
                 var usuario = new Usuario
                 {
                     UserName = dto.Email,

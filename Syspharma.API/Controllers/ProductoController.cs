@@ -139,5 +139,42 @@ namespace Syspharma.API.Controllers
                 return StatusCode(500, new { message = ex.Message, detail = ex.InnerException?.Message });
             }
         }
+
+        [HttpGet("{id}/lotes")]
+        public async Task<IActionResult> ObtenerLotesPorProducto(int id)
+        {
+            try
+            {
+                var productoExiste = await _context.Productos.AnyAsync(p => p.Id == id);
+                if (!productoExiste) return NotFound(new { message = "Producto no encontrado" });
+
+                var hoy = DateOnly.FromDateTime(DateTime.Today);
+                var config = await _context.Configuraciones
+                    .FirstOrDefaultAsync(c => c.Clave == "dias_alerta_vencimiento");
+                int diasAlerta = int.TryParse(config?.Valor, out var d) ? d : 30;
+                var limiteAlerta = hoy.AddDays(diasAlerta);
+
+                var lotes = await _context.Lotes
+                    .Where(l => l.ProductoId == id)
+                    .Select(l => new
+                    {
+                        l.Id,
+                        l.NumeroLote,
+                        l.FechaVencimiento,
+                        CantidadDisponible = l.Cantidad,
+                        Estado = l.Cantidad == 0 ? "Agotado" :
+                                 l.FechaVencimiento < hoy ? "Vencido" :
+                                 l.FechaVencimiento <= limiteAlerta ? "Por vencer" : "Vigente"
+                    })
+                    .OrderBy(l => l.FechaVencimiento)
+                    .ToListAsync();
+
+                return Ok(lotes);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
     }
 }

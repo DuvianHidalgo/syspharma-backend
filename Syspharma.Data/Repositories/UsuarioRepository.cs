@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Syspharma.Data.Context;
 using Syspharma.Data.Entities;
 using Syspharma.Domain.DTOs;
@@ -66,6 +66,9 @@ namespace Syspharma.Data.Repositories
             if (await _context.Usuarios.AnyAsync(u => u.Email == dto.Email))
                 throw new Exception("El email ya está registrado");
 
+            if (!string.IsNullOrEmpty(dto.Documento) && await _context.Usuarios.AnyAsync(u => u.Documento == dto.Documento))
+                throw new Exception("El número de documento ya está registrado por otro usuario.");
+
             var usuario = new Usuario
             {
                 Nombre = dto.Nombre,
@@ -92,6 +95,12 @@ namespace Syspharma.Data.Repositories
         {
             if (!await _context.Usuarios.AnyAsync(u => u.Id == dto.Id))
                 throw new Exception("Usuario no encontrado");
+
+            if (await _context.Usuarios.AnyAsync(u => u.Email == dto.Email && u.Id != dto.Id))
+                throw new Exception("El email ya está registrado por otro usuario.");
+
+            if (!string.IsNullOrEmpty(dto.Documento) && await _context.Usuarios.AnyAsync(u => u.Documento == dto.Documento && u.Id != dto.Id))
+                throw new Exception("El número de documento ya está registrado por otro usuario.");
 
             var usuario = await _context.Usuarios
                 .Include(u => u.Role)
